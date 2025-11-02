@@ -34,10 +34,10 @@ window.preload = function() {
     game.heartImg = loadImage("./assets/heart.png");
 
     // Load penguin enemy animations
-    game.penguinIdleImg = loadImage("./assets/Penguin/1.png");
+    game.penguinIdleImg = loadImage("./assets/penguin/1.png");
     game.penguinDeathFrames = [];
     for (let i = 2; i <= 9; i++) {
-        game.penguinDeathFrames.push(loadImage(`./assets/Penguin/${i}.png`));
+        game.penguinDeathFrames.push(loadImage(`./assets/penguin/${i}.png`));
     }
 
     // Load power-up icons
