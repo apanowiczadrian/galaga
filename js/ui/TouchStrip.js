@@ -4,7 +4,7 @@ import { getVirtualWidth, getVirtualHeight } from '../core/viewport.js';
 export class TouchStrip {
     constructor(side) {
         this.side = side;
-        this.width = getVirtualWidth() * 0.175; // Reduced to half (17.5% instead of 35%)
+        this.width = getVirtualWidth() * 0.28; // percent of screen to controll left/right
         this.active = false;
     }
 
