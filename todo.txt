@@ -1,0 +1,15 @@
+mechnika:
+- dodać okno dialogowe na początku w celu podania swojego nicku o raz hasła do odebrania nagrody
+- w końcowym eksporcie (teraz jest to print do konsoli) ma być załączony agent przegladarki (wszelkie informacje od o przeglądarce)
+- TODO: Trzeba zbalansować gre
+    - zwiększyć ilość pocisków wystrzeliwanych przez przeciwników na początkowych poziomach
+    - dostosowac pozycje bosa na poziomach, ma być bardziej schowany za przeciwnikami 
+
+elementy stylistyczne:
+- zmienić animacje wybuchu przeciwnika na animacje zamarzania i eksplzje brłyy lodu. 
+- stowrzyć animacje wybuchu statku gracza (podczas przegrywania), oraz okno typu "WASTED" w ładniejszej oprawie graficznej
+- dodać dzwięki do gry (strzały, wybuchy, muzyka w tle)
+
+Czynności do przejścia na kod produkcyjny:
+- usunąć wszystkie console.logi
+- usunąć tryb deweloperski
