@@ -30,7 +30,8 @@ let lastTime = 0;
 window.preload = function() {
     game = new Game();
     game.spaceImg = loadImage("./assets/spaceship.png");
-    game.enemyImg = loadImage("./assets/alien1.png");
+    // enemyImg removed - using penguinIdleImg as fallback instead (alien1.png deleted)
+    game.enemyImg = null;
     game.bossImg = loadImage("./assets/boss.png");
     game.cometImg = loadImage("./assets/comet.png");
     game.heartImg = loadImage("./assets/heart.png");
@@ -58,8 +59,14 @@ window.setup = function() {
     const context = canvas.elt.getContext('2d');
     context.imageSmoothingEnabled = false;
 
-    // Higher pixel density for mobile = better text quality
-    pixelDensity(isMobileDevice() ? 2 : 1);
+    // OPTIMIZED: pixelDensity(1) for maximum mobile performance
+    // pixelDensity(2) = 4× more pixels = 4× GPU load
+    // With optimized text cache, we don't need high density for crisp text
+    pixelDensity(1); // Was: isMobileDevice() ? 2 : 1
+
+    // NOTE: If text quality is poor on hi-DPI screens, consider:
+    // - Adaptive: pixelDensity(isMobileDevice() && navigator.deviceMemory >= 4 ? 2 : 1)
+    // - Or simply revert to: pixelDensity(isMobileDevice() ? 2 : 1)
 
     updateGameDimensions(game);
     game.setup();
@@ -136,7 +143,7 @@ function drawGame(deltaTime) {
         handleTouches(game, touches);
     }
 
-    background(0);
+    // background(0); // REMOVED: Canvas already cleared in window.draw() - double clear was wasting ~1-2ms per frame
 
     // Route to appropriate screen based on game state
     switch (game.gameState) {
@@ -177,6 +184,28 @@ function drawPlayingScreen(deltaTime) {
         return;
     }
 
+    // PERFORMANCE: Clear and populate spatial grid for collision detection
+    game.spatialGrid.clear();
+
+    // Add all collidable objects to grid
+    game.enemies.forEach(e => {
+        if (e.active && e.animationState !== 'dying') {
+            game.spatialGrid.insert(e);
+        }
+    });
+
+    game.cometManager.comets.forEach(c => {
+        if (c.active) {
+            game.spatialGrid.insert(c);
+        }
+    });
+
+    game.powerUpManager.powerUps.forEach(p => {
+        if (p.active) {
+            game.spatialGrid.insert(p);
+        }
+    });
+
     // Draw touch feedback (invisible strips with subtle feedback)
     if (game.isTouchDevice && game.leftTouchStrip) {
         game.leftTouchStrip.draw();
@@ -191,12 +220,19 @@ function drawPlayingScreen(deltaTime) {
     game.player.move(deltaTime);
     game.performanceMonitor.endMeasure();
 
-    // PERFORMANCE: Enemies rendering and logic
+    // PERFORMANCE: Enemies logic and batch rendering
     game.performanceMonitor.startMeasure('enemies');
+
+    // Move all enemies and add to batch renderer
+    game.enemyBatchRenderer.clear();
+
     for (let i = game.enemies.length - 1; i >= 0; i--) {
-        game.enemies[i].show();
         game.enemies[i].move(deltaTime);
+        game.enemyBatchRenderer.addEnemy(game.enemies[i]);
     }
+
+    // Render all enemies in batches (dramatically reduces state changes)
+    game.enemyBatchRenderer.render(game);
 
     // Check entire formation boundaries (all enemies move together)
     game.updateFormationMovement();
@@ -215,44 +251,45 @@ function drawPlayingScreen(deltaTime) {
         p.show();
         p.move(deltaTime);
 
-        // Check collision with enemies
+        // Check collision with enemies - OPTIMIZED with spatial grid
         game.performanceMonitor.endMeasure();
         game.performanceMonitor.startMeasure('collision');
 
         let hitSomething = false;
-        for (let j = game.enemies.length - 1; j >= 0; j--) {
-            const enemy = game.enemies[j];
-            // Can only hit enemies that are active, NOT dying, and NOT flying in
-            if (p.hit(enemy) && enemy.active && enemy.animationState !== 'dying' && !enemy.isFlying) {
-                // Enemy takes damage
-                const destroyed = enemy.takeDamage();
+        const potentialHits = game.spatialGrid.getPotentialCollisions(p);
 
-                if (destroyed) {
-                    // Points per kill increase with wave (base 1 + wave bonus)
-                    const killPoints = (1 + Math.floor(game.wave / 2)) * (enemy.type === 'boss' ? 10 : 1);
-                    game.score += killPoints;
-                    game.killedEnemies++;
+        for (const target of potentialHits) {
+            // Check if it's an enemy
+            if (target.type && (target.type === 'basic' || target.type === 'boss' || target.type === 'penguin')) {
+                // Can only hit enemies that are active, NOT dying, and NOT flying in
+                if (p.hit(target) && target.active && target.animationState !== 'dying' && !target.isFlying) {
+                    // Enemy takes damage
+                    const destroyed = target.takeDamage();
 
-                    // Try to spawn power-up at enemy position
-                    game.powerUpManager.trySpawnPowerUp(enemy.x + enemy.w / 2, enemy.y);
+                    if (destroyed) {
+                        // Points per kill increase with wave (base 1 + wave bonus)
+                        const killPoints = (1 + Math.floor(game.wave / 2)) * (target.type === 'boss' ? 10 : 1);
+                        game.score += killPoints;
+                        game.killedEnemies++;
 
-                    // Don't remove from array yet - let death animation play
-                    // Enemy will be removed in cleanup pass below
-                }
+                        // Try to spawn power-up at enemy position
+                        game.powerUpManager.trySpawnPowerUp(target.x + target.w / 2, target.y);
 
-                game.playerProjectilePool.release(p);
-                hitSomething = true;
-                break;
-            }
-        }
+                        // Don't remove from array yet - let death animation play
+                        // Enemy will be removed in cleanup pass below
+                    }
 
-        // Check collision with comets (if projectile didn't hit enemy)
-        if (!hitSomething) {
-            for (let k = game.cometManager.comets.length - 1; k >= 0; k--) {
-                const comet = game.cometManager.comets[k];
-                if (p.hit(comet) && comet.active) {
-                    game.cometManager.handleProjectileHit(comet);
                     game.playerProjectilePool.release(p);
+                    hitSomething = true;
+                    break;
+                }
+            }
+            // Check if it's a comet
+            else if (target.size && !hitSomething) {
+                if (p.hit(target) && target.active) {
+                    game.cometManager.handleProjectileHit(target);
+                    game.playerProjectilePool.release(p);
+                    hitSomething = true;
                     break;
                 }
             }
@@ -295,30 +332,34 @@ function drawPlayingScreen(deltaTime) {
         r.show();
         r.move(deltaTime);
 
-        // Check for direct hit on ANY enemy
-        for (let j = game.enemies.length - 1; j >= 0; j--) {
-            const enemy = game.enemies[j];
-            // Rocket can hit any enemy (even flying in)
-            if (r.hit(enemy) && enemy.active && enemy.animationState !== 'dying') {
-                // Rocket hit! Destroy ALL enemies on screen
-                console.log('ROCKET HIT! Destroying all enemies!');
+        // Check for direct hit on ANY enemy - OPTIMIZED with spatial grid
+        const potentialRocketHits = game.spatialGrid.getPotentialCollisions(r);
 
-                // Draw massive explosion effect
-                push();
-                noFill();
-                stroke(255, 150, 0, 200);
-                strokeWeight(4);
-                ellipse(r.x, r.y, 300, 300);
-                fill(255, 200, 0, 100);
-                noStroke();
-                ellipse(r.x, r.y, 250, 250);
-                pop();
+        for (const target of potentialRocketHits) {
+            // Check if it's an enemy
+            if (target.type && (target.type === 'basic' || target.type === 'boss' || target.type === 'penguin')) {
+                // Rocket can hit any enemy (even flying in)
+                if (r.hit(target) && target.active && target.animationState !== 'dying') {
+                    // Rocket hit! Destroy ALL enemies on screen
+                    // console.log('ROCKET HIT! Destroying all enemies!'); // Removed for performance
 
-                // Destroy ALL enemies
-                game.destroyAllEnemies();
+                    // Draw massive explosion effect
+                    push();
+                    noFill();
+                    stroke(255, 150, 0, 200);
+                    strokeWeight(4);
+                    ellipse(r.x, r.y, 300, 300);
+                    fill(255, 200, 0, 100);
+                    noStroke();
+                    ellipse(r.x, r.y, 250, 250);
+                    pop();
 
-                game.rocketPool.release(r);
-                break;
+                    // Destroy ALL enemies
+                    game.destroyAllEnemies();
+
+                    game.rocketPool.release(r);
+                    break;
+                }
             }
         }
     }

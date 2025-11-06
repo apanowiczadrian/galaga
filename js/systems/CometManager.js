@@ -109,7 +109,7 @@ export class CometManager {
             // Try to drop rocket
             if (Math.random() < rocketDropChance) {
                 this.game.rocketAmmo += 1;
-                console.log(`Comet destroyed! Rocket ammo +1! Total: ${this.game.rocketAmmo}`);
+                // console.log(`Comet destroyed! Rocket ammo +1! Total: ${this.game.rocketAmmo}`); // Removed for performance
             }
 
             return true;

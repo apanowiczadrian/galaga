@@ -125,26 +125,26 @@ export function handleKeyPressed(game, key) {
             // Toggle performance monitor
             if (key === "p" || key === "P") {
                 game.performanceMonitor.toggle();
-                console.log("Performance Monitor:", game.performanceMonitor.enabled ? "ON" : "OFF");
+                // console.log("Performance Monitor:", game.performanceMonitor.enabled ? "ON" : "OFF");
             }
 
             // Developer cheat: God Mode
             if (key === "g" || key === "G") {
                 game.godMode = !game.godMode;
-                console.log("God Mode:", game.godMode ? "ON" : "OFF");
+                // console.log("God Mode:", game.godMode ? "ON" : "OFF");
             }
 
             // Developer cheat: Next wave with '+' or '='
             if (key === "+" || key === "=") {
                 game.jumpToWave(game.wave + 1);
-                console.log("Jumped to Wave", game.wave);
+                // console.log("Jumped to Wave", game.wave);
             }
 
             // Developer cheat: Previous wave with '-'
             if (key === "-" || key === "_") {
                 if (game.wave > 1) {
                     game.jumpToWave(game.wave - 1);
-                    console.log("Jumped to Wave", game.wave);
+                    // console.log("Jumped to Wave", game.wave);
                 }
             }
             break;

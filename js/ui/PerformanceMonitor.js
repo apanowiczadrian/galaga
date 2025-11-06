@@ -6,7 +6,7 @@ import { getSafeZoneX, getSafeZoneY } from '../core/viewport.js';
  */
 export class PerformanceMonitor {
     constructor() {
-        this.enabled = true; // Always visible by default
+        this.enabled = false; // Disabled by default for performance (press P to toggle)
 
         // FPS tracking
         this.fps = 60;

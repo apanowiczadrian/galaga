@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(python:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(identify:*)",
+      "Bash(awk:*)",
+      "Bash(convert:*)",
+      "Bash(pip install:*)",
+      "Bash(node --version:*)",
+      "Bash(npm install:*)",
+      "Bash(node optimize_assets.js:*)",
+      "Bash(node optimize_assets_simple.js:*)"
     ],
     "deny": [],
     "ask": []
