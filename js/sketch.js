@@ -22,6 +22,7 @@ import {
 } from './core/input.js';
 import { Game } from './Game.js';
 import { GameStates } from './core/GameStates.js';
+import { sendStatsToGoogleSheets } from './utils/analytics.js';
 
 let game;
 let lastTime = 0;
@@ -416,6 +417,7 @@ function drawGameOverScreen(deltaTime) {
     // Log detailed stats to console only once
     if (!game.statsLogged) {
         console.log("Game Statistics:", stats);
+        sendStatsToGoogleSheets(game.playerData, stats);
         game.statsLogged = true;
     }
 

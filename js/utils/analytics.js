@@ -1,0 +1,356 @@
+/**
+ * Analytics - Send game stats to Google Sheets
+ *
+ * INSTRUKCJA:
+ * 1. Przejdź do Google Sheets i stwórz Apps Script (patrz: GOOGLE_SHEETS_INTEGRATION.md)
+ * 2. Po deployment skopiuj Web App URL
+ * 3. Wklej URL poniżej (zamiast 'YOUR_DEPLOYMENT_ID')
+ * 4. Import w sketch.js: import { sendStatsToGoogleSheets } from './utils/analytics.js';
+ */
+
+// 🔧 WKLEJ TUTAJ SWÓJ WEB APP URL Z APPS SCRIPT
+const GOOGLE_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbz6woC_vz5LuvxwLErWYyC_4GXa5GGsTK_X2TfouvteNs4pPE_in922Ctpu5ClRyDclkw/exec';
+
+// Ustaw na false aby wyłączyć wysyłanie (np. podczas developmentu)
+const ANALYTICS_ENABLED = true;
+
+/**
+ * Wykryj typ urządzenia
+ */
+function detectDevice() {
+    const ua = navigator.userAgent;
+    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+        return 'Tablet';
+    }
+    if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
+        return 'Mobile';
+    }
+    return 'Desktop';
+}
+
+/**
+ * Wykryj przeglądarkę (prosty string)
+ */
+function detectBrowser() {
+    const ua = navigator.userAgent;
+    if (ua.indexOf('Firefox') > -1) return 'Firefox';
+    if (ua.indexOf('Chrome') > -1) return 'Chrome';
+    if (ua.indexOf('Safari') > -1) return 'Safari';
+    if (ua.indexOf('Edge') > -1) return 'Edge';
+    if (ua.indexOf('Opera') > -1 || ua.indexOf('OPR') > -1) return 'Opera';
+    return 'Unknown';
+}
+
+/**
+ * Zbierz pełny fingerprint przeglądarki i urządzenia
+ */
+async function getBrowserFingerprint() {
+    const fingerprint = {
+        // User Agent
+        userAgent: navigator.userAgent,
+        browserName: detectBrowser(),
+
+        // Screen & Display
+        screenResolution: `${screen.width}x${screen.height}`,
+        screenAvailable: `${screen.availWidth}x${screen.availHeight}`,
+        windowSize: `${window.innerWidth}x${window.innerHeight}`,
+        colorDepth: screen.colorDepth,
+        pixelRatio: window.devicePixelRatio || 1,
+        orientation: screen.orientation?.type || 'unknown',
+
+        // Device Info
+        platform: navigator.platform,
+        deviceType: detectDevice(),
+        touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+        maxTouchPoints: navigator.maxTouchPoints || 0,
+        hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+        deviceMemory: navigator.deviceMemory || 'unknown',
+
+        // Language & Locale
+        language: navigator.language,
+        languages: navigator.languages?.join(', ') || navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezoneOffset: new Date().getTimezoneOffset(),
+
+        // Browser Features
+        cookiesEnabled: navigator.cookieEnabled,
+        doNotTrack: navigator.doNotTrack || 'unspecified',
+        onlineStatus: navigator.onLine,
+
+        // Connection Info
+        connection: navigator.connection ? {
+            effectiveType: navigator.connection.effectiveType,
+            downlink: navigator.connection.downlink,
+            rtt: navigator.connection.rtt,
+            saveData: navigator.connection.saveData
+        } : 'unknown',
+
+        // WebGL Info
+        webglVendor: getWebGLInfo().vendor,
+        webglRenderer: getWebGLInfo().renderer,
+
+        // Canvas Fingerprint (hash dla unikalności)
+        canvasFingerprint: getCanvasFingerprint(),
+
+        // Storage
+        localStorage: typeof(Storage) !== 'undefined',
+        sessionStorage: typeof(Storage) !== 'undefined',
+
+        // Additional Features
+        webWorkers: typeof(Worker) !== 'undefined',
+        serviceWorkers: 'serviceWorker' in navigator,
+        geolocation: 'geolocation' in navigator,
+
+        // Timestamp
+        timestamp: new Date().toISOString()
+    };
+
+    // Pobierz IP (opcjonalne, tylko jeśli dostępne)
+    try {
+        const ipData = await getPublicIP();
+        fingerprint.ip = ipData.ip;
+        fingerprint.ipLocation = ipData.location;
+    } catch (error) {
+        fingerprint.ip = 'unavailable';
+        fingerprint.ipLocation = 'unavailable';
+    }
+
+    return fingerprint;
+}
+
+/**
+ * Pobierz informacje WebGL
+ */
+function getWebGLInfo() {
+    try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+        if (!gl) {
+            return { vendor: 'unavailable', renderer: 'unavailable' };
+        }
+
+        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+        if (debugInfo) {
+            return {
+                vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+                renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+            };
+        }
+
+        return {
+            vendor: gl.getParameter(gl.VENDOR),
+            renderer: gl.getParameter(gl.RENDERER)
+        };
+    } catch (e) {
+        return { vendor: 'error', renderer: 'error' };
+    }
+}
+
+/**
+ * Wygeneruj Canvas Fingerprint (hash)
+ */
+function getCanvasFingerprint() {
+    try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Rysuj tekst z różnymi fontami
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#f60';
+        ctx.fillRect(0, 0, 100, 50);
+        ctx.fillStyle = '#069';
+        ctx.fillText('Canvas Fingerprint 🎮', 2, 2);
+        ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+        ctx.fillText('Canvas Fingerprint 🎮', 4, 4);
+
+        // Konwertuj na hash
+        const dataURL = canvas.toDataURL();
+        return simpleHash(dataURL);
+    } catch (e) {
+        return 'unavailable';
+    }
+}
+
+/**
+ * Prosty hash function
+ */
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash.toString(36);
+}
+
+/**
+ * Pobierz publiczne IP (używa darmowego API)
+ */
+async function getPublicIP() {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json', {
+            timeout: 2000 // 2 sekundy timeout
+        });
+        const data = await response.json();
+
+        // Opcjonalnie pobierz lokalizację
+        try {
+            const geoResponse = await fetch(`https://ipapi.co/${data.ip}/json/`, {
+                timeout: 2000
+            });
+            const geoData = await geoResponse.json();
+
+            return {
+                ip: data.ip,
+                location: {
+                    country: geoData.country_name,
+                    city: geoData.city,
+                    region: geoData.region
+                }
+            };
+        } catch (e) {
+            return { ip: data.ip, location: 'unavailable' };
+        }
+    } catch (error) {
+        return { ip: 'unavailable', location: 'unavailable' };
+    }
+}
+
+/**
+ * Wyślij statystyki do Google Sheets
+ *
+ * @param {Object} playerData - Dane gracza {nick, email}
+ * @param {Object} stats - Statystyki gry z finalizeStats()
+ * @returns {Promise<boolean>} - true jeśli wysłano pomyślnie
+ */
+export async function sendStatsToGoogleSheets(playerData, stats) {
+    // Sprawdź czy analytics jest włączony
+    if (!ANALYTICS_ENABLED) {
+        console.log('📊 Analytics disabled');
+        return false;
+    }
+
+    // Sprawdź czy endpoint jest skonfigurowany
+    if (GOOGLE_SHEETS_ENDPOINT.includes('YOUR_DEPLOYMENT_ID')) {
+        console.warn('⚠️ Google Sheets endpoint not configured. See GOOGLE_SHEETS_INTEGRATION.md');
+        return false;
+    }
+
+    try {
+        // Zbierz pełny fingerprint przeglądarki (z IP)
+        console.log('📊 Collecting browser fingerprint...');
+        const browserFingerprint = await getBrowserFingerprint();
+
+        // Przygotuj dane do wysłania
+        const payload = {
+            // Dane gracza
+            nick: playerData?.nick || 'Anonymous',
+            email: playerData?.email || '',
+
+            // Wyniki
+            finalScore: stats.finalScore || 0,
+            finalWave: stats.finalWave || 0,
+            enemiesKilled: stats.enemiesKilled || 0,
+
+            // Czas gry
+            totalGameTime: stats.totalGameTime || '0',
+
+            // Strzały
+            totalShots: stats.totalShots || 0,
+            shotsPerSecond: stats.shotsPerSecond || '0',
+            shotsByWeapon: stats.shotsByWeapon || {
+                basic: 0,
+                triple: 0,
+                rocket: 0
+            },
+
+            // Power-upy
+            powerUpsCollected: stats.powerUpsCollected || {
+                life: 0,
+                shield: 0,
+                autofire: 0,
+                tripleshot: 0,
+                rocket: 0
+            },
+
+            // Metadata
+            device: detectDevice(),
+            browser: JSON.stringify(browserFingerprint), // 🆕 Pełny fingerprint jako JSON
+            timestamp: Date.now(),
+
+            // URL gry (dla multi-domain tracking)
+            gameUrl: window.location.href
+        };
+
+        console.log('📊 Sending stats to Google Sheets...', payload);
+        console.log('🔍 Browser fingerprint:', browserFingerprint);
+
+        // Wyślij POST request
+        const response = await fetch(GOOGLE_SHEETS_ENDPOINT, {
+            method: 'POST',
+            mode: 'no-cors', // Important: Google Apps Script wymaga no-cors
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        // Note: mode: 'no-cors' nie pozwala odczytać response,
+        // ale request zostanie wysłany i przetworzony przez Apps Script
+        console.log('✅ Stats sent to Google Sheets!');
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error sending stats to Google Sheets:', error);
+        return false;
+    }
+}
+
+/**
+ * Testowa funkcja do sprawdzenia czy endpoint działa
+ * Wywołaj w console: testAnalytics()
+ */
+export function testAnalytics() {
+    const testData = {
+        nick: 'TestPlayer',
+        email: 'test@example.com',
+        finalScore: 99999,
+        finalWave: 99,
+        enemiesKilled: 999,
+        totalGameTime: '999.99',
+        totalShots: 999,
+        shotsPerSecond: '9.99',
+        shotsByWeapon: {
+            basic: 500,
+            triple: 300,
+            rocket: 199
+        },
+        powerUpsCollected: {
+            life: 5,
+            shield: 10,
+            autofire: 15,
+            tripleshot: 20,
+            rocket: 25
+        }
+    };
+
+    console.log('🧪 Testing analytics endpoint...');
+    sendStatsToGoogleSheets(
+        { nick: testData.nick, email: testData.email },
+        testData
+    ).then(success => {
+        if (success) {
+            console.log('✅ Test successful! Check your Google Sheet.');
+        } else {
+            console.log('❌ Test failed. Check console for errors.');
+        }
+    });
+}
+
+// Udostępnij funkcję testową globalnie
+if (typeof window !== 'undefined') {
+    window.testAnalytics = testAnalytics;
+}

@@ -417,8 +417,8 @@ export class Game {
         const heartsStartX = getSafeZoneX() + SAFE_ZONE_WIDTH - 30;
         const scoreY = getSafeZoneY() + 30; // Same height as hearts
 
-        // Score: positioned RIGHT-aligned, just to the left of hearts (10px gap)
-        const scoreX = heartsStartX - 10;
+        // Score: positioned RIGHT-aligned, to the left of hearts (40px gap to avoid overlap)
+        const scoreX = heartsStartX - 40;
 
         // OPTIMIZED: Draw score with cached rendering (RIGHT-aligned)
         if (this.cachedLabels) {

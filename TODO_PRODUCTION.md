@@ -95,5 +95,36 @@ rm -rf assets/penguin/originals/
 
 ---
 
+---
+
+## 📊 Google Sheets Integration (Opcjonalnie)
+
+### Zbieranie statystyk graczy
+
+Aby zbierać dane graczy do Google Sheets:
+
+1. **Przeczytaj instrukcję:** `GOOGLE_SHEETS_INTEGRATION.md`
+2. **Stwórz Google Sheet** z Apps Script
+3. **Skonfiguruj endpoint** w `js/utils/analytics.js`
+4. **Dodaj import** w `js/sketch.js`:
+   ```javascript
+   import { sendStatsToGoogleSheets } from './utils/analytics.js';
+   ```
+5. **Wywołaj funkcję** w `drawGameOverScreen()` (linia ~418):
+   ```javascript
+   if (!game.statsLogged) {
+       console.log("Game Statistics:", stats);
+       sendStatsToGoogleSheets(game.playerData, stats);
+       game.statsLogged = true;
+   }
+   ```
+
+**Pliki:**
+- ✅ `GOOGLE_SHEETS_INTEGRATION.md` - Pełna instrukcja
+- ✅ `js/utils/analytics.js` - Gotowy moduł do wysyłania danych
+
+---
+
 _Utworzono: 2025-11-06_
-_Status: Grafiki zoptymalizowane ✅, Backup folders czekają na usunięcie przed produkcją_
+_Zaktualizowano: 2025-11-06_
+_Status: Grafiki zoptymalizowane ✅, UI poprawiony ✅, Google Sheets integration gotowy ✅_
