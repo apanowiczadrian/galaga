@@ -11,7 +11,8 @@ import {
     getOffsetY,
     getViewportDimensions,
     updateGameDimensions,
-    handleResizeEvent
+    handleResizeEvent,
+    isMobileDevice
 } from './core/viewport.js';
 import {
     handleTouches,
@@ -20,6 +21,7 @@ import {
     handleKeyPressed
 } from './core/input.js';
 import { Game } from './Game.js';
+import { GameStates } from './core/GameStates.js';
 
 let game;
 let lastTime = 0;
@@ -45,6 +47,9 @@ window.preload = function() {
     game.autofireImg = loadImage("./assets/autofire.png");
     game.tripleshotImg = loadImage("./assets/tripleshot.png");
     game.rocketImg = loadImage("./assets/rocket.png");
+
+    // Load font for pixel art style UI
+    game.pixelFont = loadFont('./assets/PressStart2P-Regular.ttf');
 }
 
 window.setup = function() {
@@ -53,10 +58,31 @@ window.setup = function() {
     const context = canvas.elt.getContext('2d');
     context.imageSmoothingEnabled = false;
 
-    pixelDensity(1);
+    // Higher pixel density for mobile = better text quality
+    pixelDensity(isMobileDevice() ? 2 : 1);
 
     updateGameDimensions(game);
     game.setup();
+
+    // Hide canvas initially, show HTML menu
+    canvas.elt.style.display = 'none';
+
+    // Listen for start game event from HTML menu
+    window.addEventListener('startGame', function(e) {
+        const playerData = e.detail;
+
+        // Hide HTML menu
+        const menuOverlay = document.getElementById('start-menu');
+        if (menuOverlay) {
+            menuOverlay.style.display = 'none';
+        }
+
+        // Show canvas
+        canvas.elt.style.display = 'block';
+
+        // Start the game with player data
+        game.startGame(playerData);
+    });
 }
 
 window.draw = function() {
@@ -110,16 +136,36 @@ function drawGame(deltaTime) {
         handleTouches(game, touches);
     }
 
-    if (window.innerWidth < window.innerHeight && game.isTouchDevice) {
-        background(0);
-        fill(255);
-        textAlign(CENTER, CENTER);
-        textSize(20);
-        text("Please rotate your device", getVirtualWidth() / 2, getVirtualHeight() / 2);
-        return;
-    }
-
     background(0);
+
+    // Route to appropriate screen based on game state
+    switch (game.gameState) {
+        case GameStates.MENU:
+            drawMenuScreen(deltaTime);
+            break;
+        case GameStates.PLAYING:
+            drawPlayingScreen(deltaTime);
+            break;
+        case GameStates.GAME_OVER:
+            drawGameOverScreen(deltaTime);
+            break;
+    }
+}
+
+// Menu screen (now using HTML menu, not canvas)
+function drawMenuScreen(deltaTime) {
+    // HTML menu is displayed instead of canvas menu
+    // Just draw stars as background for smooth transition
+    game.drawStars(deltaTime);
+
+    // Note: Canvas is hidden when in MENU state
+    // The HTML menu (index.html) handles user input
+}
+
+// Playing screen (original game logic)
+function drawPlayingScreen(deltaTime) {
+    // Update performance monitor
+    game.performanceMonitor.update(deltaTime);
 
     // Draw safe zone border
     drawSafeZone();
@@ -127,35 +173,7 @@ function drawGame(deltaTime) {
     strokeWeight(1);
 
     if (game.gameOver) {
-        // Finalize statistics when game ends
-        const stats = game.finalizeStats();
-
-        // Log detailed stats to console only once
-        if (!game.statsLogged) {
-            console.log("Game Statistics:", stats);
-            game.statsLogged = true;
-        }
-
-        textAlign(CENTER);
-        fill(255);
-        textSize(32);
-        text("Game Over", getVirtualWidth() / 2, getVirtualHeight() / 2 - 100);
-
-        textSize(16);
-        text("Score: " + game.score, getVirtualWidth() / 2, getVirtualHeight() / 2 - 60);
-        text("Wave: " + game.wave, getVirtualWidth() / 2, getVirtualHeight() / 2 - 40);
-
-        // Format time as MM:SS
-        const totalSeconds = Math.floor(game.stats.totalGameTime);
-        const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        const timeString = minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
-
-        text("Time: " + timeString, getVirtualWidth() / 2, getVirtualHeight() / 2 - 20);
-        text("Shots/sec: " + stats.shotsPerSecond, getVirtualWidth() / 2, getVirtualHeight() / 2);
-
-        game.retryButton.draw();
-        game.devOverlay.draw(game);
+        // Game ended - should transition to GAME_OVER state
         return;
     }
 
@@ -167,9 +185,14 @@ function drawGame(deltaTime) {
 
     game.drawStars(deltaTime);
 
+    // PERFORMANCE: Player rendering and logic
+    game.performanceMonitor.startMeasure('player');
     game.player.show();
     game.player.move(deltaTime);
+    game.performanceMonitor.endMeasure();
 
+    // PERFORMANCE: Enemies rendering and logic
+    game.performanceMonitor.startMeasure('enemies');
     for (let i = game.enemies.length - 1; i >= 0; i--) {
         game.enemies[i].show();
         game.enemies[i].move(deltaTime);
@@ -177,7 +200,10 @@ function drawGame(deltaTime) {
 
     // Check entire formation boundaries (all enemies move together)
     game.updateFormationMovement();
+    game.performanceMonitor.endMeasure();
 
+    // PERFORMANCE: Projectiles and collision detection
+    game.performanceMonitor.startMeasure('projectiles');
     for (let p of game.playerProjectilePool.pool) {
         if (!p.active) continue;
 
@@ -190,6 +216,9 @@ function drawGame(deltaTime) {
         p.move(deltaTime);
 
         // Check collision with enemies
+        game.performanceMonitor.endMeasure();
+        game.performanceMonitor.startMeasure('collision');
+
         let hitSomething = false;
         for (let j = game.enemies.length - 1; j >= 0; j--) {
             const enemy = game.enemies[j];
@@ -228,7 +257,11 @@ function drawGame(deltaTime) {
                 }
             }
         }
+
+        game.performanceMonitor.endMeasure();
+        game.performanceMonitor.startMeasure('projectiles');
     }
+    game.performanceMonitor.endMeasure();
 
     for (let p of game.enemyProjectilePool.pool) {
         if (!p.active) continue;
@@ -302,25 +335,73 @@ function drawGame(deltaTime) {
         game.startNextWave();
     }
 
+    // PERFORMANCE: Power-ups system
+    game.performanceMonitor.startMeasure('powerups');
+    game.updatePowerUps(deltaTime);
+    game.powerUpManager.draw();
+    game.performanceMonitor.endMeasure();
+
+    // PERFORMANCE: Comets system
+    game.performanceMonitor.startMeasure('comets');
+    game.cometManager.draw();
+    game.performanceMonitor.endMeasure();
+
+    // PERFORMANCE: UI rendering
+    game.performanceMonitor.startMeasure('ui');
     game.updateKilledText();
     game.updateWaveText();
     game.drawScore();
     game.drawLives();
     game.drawWaveBonus(deltaTime);
-
-    // Update and draw power-ups
-    game.updatePowerUps(deltaTime);
-    game.powerUpManager.draw();
-
-    // Draw comets
-    game.cometManager.draw();
-
-    // Weapon heat bar
     game.weaponHeatBar.draw(game.player.weaponHeat);
+    game.performanceMonitor.endMeasure();
 
     // Dev overlay - zawsze na końcu
     game.devOverlay.update(deltaTime);
     game.devOverlay.draw(game);
+
+    // Performance Monitor - always visible in top-left corner
+    game.performanceMonitor.draw();
+}
+
+// Game Over screen
+function drawGameOverScreen(deltaTime) {
+    // Draw stars in background
+    game.drawStars(deltaTime);
+
+    // Finalize statistics when game ends
+    const stats = game.finalizeStats();
+
+    // Log detailed stats to console only once
+    if (!game.statsLogged) {
+        console.log("Game Statistics:", stats);
+        game.statsLogged = true;
+    }
+
+    // Get top scores for leaderboard
+    const topScores = game.scoreManager.getTopScores(4);
+
+    // Find player's rank in full leaderboard
+    const playerRank = game.scoreManager.findPlayerRank(
+        game.playerData,
+        game.score,
+        Math.floor(game.stats.totalGameTime)
+    );
+
+    // Update game over screen (for hover effects and animation)
+    const virtualMouseX = (mouseX - getOffsetX()) / getScaleFactor();
+    const virtualMouseY = (mouseY - getOffsetY()) / getScaleFactor();
+    game.gameOverScreen.update(virtualMouseX, virtualMouseY, deltaTime);
+
+    // Draw game over screen
+    game.gameOverScreen.draw(
+        game.score,
+        game.wave,
+        game.stats.totalGameTime,
+        game.playerData,
+        topScores,
+        playerRank
+    );
 }
 
 window.mousePressed = function() {

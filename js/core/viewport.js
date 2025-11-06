@@ -33,21 +33,24 @@ export function getTargetWidth() {
     return isMobileDevice() ? MOBILE_TARGET_WIDTH : PC_TARGET_WIDTH;
 }
 
+// Stały margines dla wersji desktop (piksele z każdej strony)
+const DESKTOP_MARGIN = 20;
+
 // Core Sizing and Scaling Logic
 export function getViewportDimensions() {
+    // Zawsze zwracaj pełne wymiary viewportu (canvas będzie pełnej wielkości)
+    // Margines będzie uwzględniony tylko w obliczeniach skali i offsetów
     if (window.visualViewport) {
-        // Safe areas support (iOS notch, etc)
-        const safeTop = parseFloat(getComputedStyle(document.documentElement)
-            .getPropertyValue('--sai-top')) || 0;
-        const safeBottom = parseFloat(getComputedStyle(document.documentElement)
-            .getPropertyValue('--sai-bottom')) || 0;
-
         return {
             width: window.visualViewport.width,
-            height: window.visualViewport.height - safeTop - safeBottom
+            height: window.visualViewport.height
         };
     }
-    return { width: window.innerWidth, height: window.innerHeight };
+
+    return {
+        width: document.documentElement.clientWidth,
+        height: document.documentElement.clientHeight
+    };
 }
 
 export function calculateGameArea() {
@@ -84,18 +87,28 @@ export function calculateGameArea() {
 
 export function updateScaleAndOffset() {
     const { width, height } = getViewportDimensions();
-    const screenAspect = width / height;
-    const virtualAspect = _VIRTUAL_WIDTH / _VIRTUAL_HEIGHT;
+    const isMobile = isMobileDevice();
 
-    if (screenAspect > virtualAspect) {
-        _scaleFactor = height / _VIRTUAL_HEIGHT;
-        _offsetX = (width - _VIRTUAL_WIDTH * _scaleFactor) / 2;
-        _offsetY = 0;
-    } else {
-        _scaleFactor = width / _VIRTUAL_WIDTH;
-        _offsetX = 0;
-        _offsetY = (height - _VIRTUAL_HEIGHT * _scaleFactor) / 2;
-    }
+    // Na desktop, odejmij margines od dostępnej przestrzeni
+    const availableWidth = isMobile ? width : width - (DESKTOP_MARGIN * 2);
+    const availableHeight = isMobile ? height : height - (DESKTOP_MARGIN * 2);
+
+    // WAŻNE: Skaluj na podstawie SAFE_ZONE, a nie virtual space
+    // Safe zone to obszar gdzie faktycznie rozgrywa się gra
+    const scaleByHeight = availableHeight / SAFE_ZONE_HEIGHT;
+    const scaleByWidth = availableWidth / SAFE_ZONE_WIDTH;
+
+    // Wybierz mniejszy współczynnik, aby cały safe zone zmieścił się na ekranie
+    _scaleFactor = Math.min(scaleByHeight, scaleByWidth);
+
+    // Wycentruj safe zone na ekranie (uwzględnij safeZoneX/Y offset)
+    const scaledSafeZoneX = _safeZoneX * _scaleFactor;
+    const scaledSafeZoneY = _safeZoneY * _scaleFactor;
+    const scaledSafeZoneWidth = SAFE_ZONE_WIDTH * _scaleFactor;
+    const scaledSafeZoneHeight = SAFE_ZONE_HEIGHT * _scaleFactor;
+
+    _offsetX = (width - scaledSafeZoneWidth) / 2 - scaledSafeZoneX;
+    _offsetY = (height - scaledSafeZoneHeight) / 2 - scaledSafeZoneY;
 }
 
 export function updateGameDimensions(game) {

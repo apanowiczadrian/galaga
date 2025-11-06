@@ -8,7 +8,7 @@ export class DevOverlay {
         this.frameCount = 0;
         this.lastFpsUpdate = 0;
         this.fpsHistory = [];
-        this.enabled = true;
+        this.enabled = false; // Hidden by default, toggle with 'D' key
     }
 
     update(deltaTime) {
@@ -91,7 +91,7 @@ export class DevOverlay {
         y += 20;
         fill(100, 100, 100);
         textSize(10);
-        text(`D=Overlay G=God +/-=Wave`, 15, y);
+        text(`D=Overlay P=Perf G=God +/-=Wave`, 15, y);
 
         pop();
     }

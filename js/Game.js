@@ -4,15 +4,27 @@ import { Player } from './entities/Player.js';
 import { Enemy } from './entities/Enemy.js';
 import { ProjectilePool, RocketPool } from './entities/Projectile.js';
 import { DevOverlay } from './ui/DevOverlay.js';
+import { PerformanceMonitor } from './ui/PerformanceMonitor.js';
 import { TouchStrip } from './ui/TouchStrip.js';
 import { CanvasButton } from './ui/CanvasButton.js';
 import { WeaponHeatBar } from './ui/WeaponHeatBar.js';
 import { getPatternForWave } from './config/wavePatterns.js';
 import { PowerUpManager } from './systems/PowerUpManager.js';
 import { CometManager } from './systems/CometManager.js';
+import { GameStates } from './core/GameStates.js';
+import { ScoreManager } from './systems/ScoreManager.js';
+import { StartMenu } from './ui/StartMenu.js';
+import { GameOverScreen } from './ui/GameOverScreen.js';
 
 export class Game {
     constructor() {
+        // Game state management
+        this.gameState = GameStates.MENU;
+        this.playerData = { nick: '', email: '' };
+        this.scoreManager = new ScoreManager();
+        this.startMenu = null; // Initialize later
+        this.gameOverScreen = null; // Initialize later
+
         this.player = null;
         this.enemies = [];
         this.playerProjectilePool = new ProjectilePool(10, 'player');
@@ -35,6 +47,7 @@ export class Game {
         this.killedEnemies = 0;
         this.stars = [];
         this.devOverlay = new DevOverlay();
+        this.performanceMonitor = new PerformanceMonitor();
         this.weaponHeatBar = new WeaponHeatBar();
         this.waveBonus = 0;
         this.waveBonusTimer = 0;
@@ -50,6 +63,7 @@ export class Game {
         this.autoFireRate = 0.15; // Auto-fire every 0.15 seconds
         this.statsLogged = false; // Track if stats were already logged
         this.rocketAmmo = 0; // Rocket ammunition count
+        this.pixelFont = null; // Will hold the loaded pixel font
 
         // Game statistics
         this.stats = {
@@ -74,8 +88,14 @@ export class Game {
     }
 
     setup() {
-        this.resetGame();
+        // Initialize UI components
+        // StartMenu is now HTML-based (see index.html), not canvas-based
+        // this.startMenu = new StartMenu(this); // DISABLED - using HTML menu
+        this.gameOverScreen = new GameOverScreen(this);
         this.initTouchStrips();
+
+        // Start at menu state (HTML menu will be shown, canvas hidden)
+        this.gameState = GameStates.MENU;
     }
 
     initTouchStrips() {
@@ -338,16 +358,32 @@ export class Game {
         // Format score with leading zeros (minimum 5 digits)
         const formattedScore = String(this.score).padStart(5, '0');
 
-        fill(255, 255, 255);
-        textAlign(RIGHT, CENTER);
-        textSize(24);
-        noStroke();
-
         // Position: to the left of hearts (hearts start at SAFE_ZONE_WIDTH - 30)
         const scoreX = getSafeZoneX() + SAFE_ZONE_WIDTH - 120; // 120px from right = space for hearts
         const scoreY = getSafeZoneY() + 30; // Same height as hearts
 
+        // Draw player nick (if exists) to the LEFT of score
+        if (this.playerData && this.playerData.nick) {
+            fill(255, 215, 100); // Gold color
+            textAlign(LEFT, CENTER);
+            textSize(14);
+            textFont('Rajdhani, Arial, sans-serif');
+            textStyle(BOLD);
+            noStroke();
+            // Calculate nick position: score position minus score width minus some spacing
+            const nickX = getSafeZoneX() + SAFE_ZONE_WIDTH - 240; // More space to the left
+            text(this.playerData.nick, nickX, scoreY);
+            textStyle(NORMAL);
+        }
+
+        // Draw score
+        fill(255, 255, 255);
+        textAlign(RIGHT, CENTER);
+        textSize(24);
+        textFont('Arial, sans-serif');
+        noStroke();
         text(formattedScore, scoreX, scoreY);
+
         pop();
     }
 
@@ -355,13 +391,7 @@ export class Game {
         this.lives--;
 
         if (this.lives <= 0) {
-            this.gameOver = true;
-            // Finalize stats immediately when game ends
-            this.stats.gameEndTime = Date.now();
-            this.stats.totalGameTime = (this.stats.gameEndTime - this.stats.gameStartTime) / 1000;
-            if (this.stats.totalGameTime > 0) {
-                this.stats.shotsPerSecond = (this.stats.totalShots / this.stats.totalGameTime).toFixed(2);
-            }
+            this.endGame();
             return;
         }
 
@@ -531,5 +561,51 @@ export class Game {
             finalWave: this.wave,
             enemiesKilled: this.killedEnemies
         };
+    }
+
+    // State management methods
+    startGame(playerData) {
+        // Save player data
+        this.playerData = playerData;
+
+        // Reset game and start playing
+        this.resetGame();
+        this.gameState = GameStates.PLAYING;
+    }
+
+    endGame() {
+        // Finalize stats
+        this.gameOver = true;
+        this.stats.gameEndTime = Date.now();
+        this.stats.totalGameTime = (this.stats.gameEndTime - this.stats.gameStartTime) / 1000;
+        if (this.stats.totalGameTime > 0) {
+            this.stats.shotsPerSecond = (this.stats.totalShots / this.stats.totalGameTime).toFixed(2);
+        }
+
+        // Save score to leaderboard
+        this.scoreManager.saveScore(
+            this.playerData,
+            this.score,
+            this.wave,
+            Math.floor(this.stats.totalGameTime)
+        );
+
+        // Reset game over screen animation
+        this.gameOverScreen.reset();
+
+        // Change to game over screen
+        this.gameState = GameStates.GAME_OVER;
+    }
+
+    restartGame() {
+        // Restart game with same player data (no return to menu)
+        this.resetGame();
+        this.gameState = GameStates.PLAYING;
+    }
+
+    returnToMenu() {
+        // Reset to menu state
+        this.gameState = GameStates.MENU;
+        this.gameOver = false;
     }
 }

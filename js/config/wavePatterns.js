@@ -37,8 +37,8 @@ export const WAVE_PATTERNS = {
     // 4. Walls (Korytarz) - dwie ściany z przejściem w środku
     walls: {
         rows: [
-            { type: 'basic', count: 4, startX: 60 },      // Lewa ściana
-            { type: 'basic', count: 4, startX: 660 },     // Prawa ściana
+            { type: 'basic', count: 4, startX: 30 },      // Lewa ściana
+            { type: 'basic', count: 4, startX: 720 },     // Prawa ściana
             { type: 'basic', count: 4, startX: 60 },
             { type: 'basic', count: 4, startX: 660 },
             { type: 'basic', count: 4, startX: 60 },

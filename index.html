@@ -5,35 +5,112 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
-    
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&family=Russo+One&display=swap" rel="stylesheet">
+
     <!-- iOS/Android Full-Screen and Viewport Control -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <script src="js/p5.min.js"></script>
+
+    <!-- Start Menu Logic (loaded before sketch.js) -->
+    <script>
+      // Global variable to store player data from HTML form
+      window.playerDataFromMenu = null;
+      window.isMenuReady = false;
+
+      // Load saved player data from localStorage on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        const nickInput = document.getElementById('nick-input');
+        const emailInput = document.getElementById('email-input');
+
+        // Load saved player data
+        try {
+          const saved = localStorage.getItem('spaceInvPlayerData');
+          if (saved) {
+            const data = JSON.parse(saved);
+            if (data.nick) nickInput.value = data.nick;
+            if (data.email) emailInput.value = data.email;
+          }
+        } catch (e) {
+          console.error('Error loading player data:', e);
+        }
+
+        // Form submission handler
+        const form = document.getElementById('start-form');
+        const errorMessage = document.getElementById('error-message');
+
+        function startGame() {
+          const nick = nickInput.value.trim();
+          const email = emailInput.value.trim();
+
+          // Validation
+          if (!nick) {
+            errorMessage.textContent = 'Nick jest wymagany!';
+            return;
+          }
+
+          if (nick.length < 2) {
+            errorMessage.textContent = 'Nick musi mieć min. 2 znaki!';
+            return;
+          }
+
+          // Clear error
+          errorMessage.textContent = '';
+
+          // Save to localStorage
+          try {
+            localStorage.setItem('spaceInvPlayerData', JSON.stringify({
+              nick: nick,
+              email: email
+            }));
+          } catch (e) {
+            console.error('Error saving player data:', e);
+          }
+
+          // Store player data for game
+          window.playerDataFromMenu = {
+            nick: nick,
+            email: email
+          };
+
+          // Hide menu, show canvas (will be done by sketch.js)
+          window.isMenuReady = true;
+
+          // Trigger custom event for sketch.js to listen
+          window.dispatchEvent(new CustomEvent('startGame', {
+            detail: { nick: nick, email: email }
+          }));
+        }
+
+        // Form submit handler (works for both Enter key and button click)
+        form.addEventListener('submit', function(e) {
+          e.preventDefault(); // Prevent page reload
+          startGame();
+        });
+
+        // Auto-focus on nick input for desktop
+        if (window.innerWidth > 768) {
+          setTimeout(() => nickInput.focus(), 100);
+        }
+      });
+    </script>
+
     <!-- Use type="module" for ES6 module support -->
     <script type="module" src="js/sketch.js"></script>
 
     <style>
-  :root {
-    --sai-top: env(safe-area-inset-top, 0px);
-    --sai-bottom: env(safe-area-inset-bottom, 0px);
-    --sai-left: env(safe-area-inset-left, 0px);
-    --sai-right: env(safe-area-inset-right, 0px);
-}
-
-body {
-    padding-top: var(--sai-top);
-    padding-bottom: var(--sai-bottom);
-    padding-left: var(--sai-left);
-    padding-right: var(--sai-right);
-}
-
   html, body {
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: hidden;
+    width: 100%;
+    height: 100%;
     background-color: #000; /* Black background for the page */
   }
 
@@ -42,19 +119,29 @@ body {
             position: fixed;
             top: 0;
             left: 0;
+            z-index: 100; /* Below menu overlay (which is z-index: 1000) */
+
             /* Prevent iOS text selection/callout behaviors */
             -webkit-user-select: none; /* Safari */
             user-select: none;
             -webkit-touch-callout: none; /* iOS */
-            
+
             /* Crisp rendering and disable touch actions */
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
             touch-action: none;
+
+            /* Allow clicks to pass through when hidden */
+            pointer-events: auto;
         }
 
-        /* Orientation Hint for Portrait Mode */
+        canvas[style*="display: none"] {
+            pointer-events: none !important;
+            z-index: -1 !important; /* Move completely behind when hidden */
+        }
+
+        /* Orientation Hint for Portrait Mode (tylko na urządzeniach mobilnych) */
         #orientation-hint {
             display: none;
             position: fixed;
@@ -72,7 +159,9 @@ body {
             z-index: 1000;
         }
 
-        @media (orientation: portrait) {
+        /* Pokazuj komunikat tylko na urządzeniach mobilnych w trybie portrait */
+        @media (orientation: portrait) and (max-width: 768px),
+               (orientation: portrait) and (pointer: coarse) {
             #orientation-hint {
                 display: flex;
             }
@@ -87,6 +176,71 @@ body {
     <div id="orientation-hint">
         Please rotate your device to landscape mode to play.
     </div>
+
+    <!-- HTML Start Menu (Native Mobile Keyboard Support) -->
+    <div id="start-menu" class="menu-overlay">
+      <div class="menu-container">
+        <h1 class="menu-title">SPACE INVADERS</h1>
+        <p class="menu-subtitle">Wpisz swoje dane, aby rozpocząć</p>
+
+        <!-- Controls info -->
+        <div class="controls-info">
+          <div class="controls-title">STEROWANIE</div>
+          <div class="controls-desktop">
+            <div class="key-group">
+              <div class="key">←</div>
+              <div class="key">→</div>
+              <div class="key-label">Ruch</div>
+            </div>
+            <div class="key-group">
+              <div class="key key-space">SPACJA</div>
+              <div class="key-label">Strzał</div>
+            </div>
+          </div>
+          <div class="controls-mobile">
+            <p>Dotknij ekranu po bokach</p>
+            <p>Lewo/Prawo - ruch | Prawo - strzał</p>
+          </div>
+        </div>
+
+        <!-- Form -->
+        <form id="start-form" class="menu-form">
+          <div class="form-row">
+            <label for="nick-input">Nick:</label>
+            <input
+              id="nick-input"
+              type="text"
+              placeholder="Twój nick..."
+              required
+              minlength="2"
+              maxlength="20"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            >
+          </div>
+
+          <div class="form-row">
+            <label for="email-input">Email:</label>
+            <input
+              id="email-input"
+              type="email"
+              placeholder="twoj@email.pl"
+              maxlength="40"
+              autocomplete="off"
+              autocapitalize="off"
+            >
+          </div>
+
+          <p class="email-hint">Email służy jako hasło do odebrania nagrody</p>
+
+          <div class="error-message" id="error-message"></div>
+
+          <button type="submit" id="start-button" class="start-button">START GAME</button>
+        </form>
+      </div>
+    </div>
+
     <script>
       // Prevent pinch-to-zoom
       document.addEventListener('touchmove', function (event) {
@@ -95,11 +249,20 @@ body {
         }
       }, { passive: false });
 
-      // Prevent double-tap-to-zoom
+      // Prevent double-tap-to-zoom (except on form elements)
       var lastTouchEnd = 0;
       document.addEventListener('touchend', function (event) {
         var now = (new Date()).getTime();
-        if (now - lastTouchEnd <= 300) {
+        var target = event.target;
+
+        // Don't prevent default on form elements
+        var isFormElement = target.tagName === 'INPUT' ||
+                           target.tagName === 'BUTTON' ||
+                           target.tagName === 'TEXTAREA' ||
+                           target.tagName === 'SELECT' ||
+                           target.closest('.menu-overlay');
+
+        if (now - lastTouchEnd <= 300 && !isFormElement) {
           event.preventDefault();
         }
         lastTouchEnd = now;
