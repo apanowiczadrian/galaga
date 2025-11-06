@@ -417,7 +417,12 @@ function drawGameOverScreen(deltaTime) {
     // Log detailed stats to console only once
     if (!game.statsLogged) {
         console.log("Game Statistics:", stats);
-        sendStatsToGoogleSheets(game.playerData, stats);
+
+        // Get FPS stats from performance monitor
+        const fpsStats = game.performanceMonitor.getFpsStats();
+        console.log("FPS Statistics:", fpsStats);
+
+        sendStatsToGoogleSheets(game.playerData, stats, fpsStats);
         game.statsLogged = true;
     }
 

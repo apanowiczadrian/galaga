@@ -291,7 +291,8 @@ export class Game {
 
                     // Check if any enemy reached bottom (game over)
                     if (enemy.y + enemy.h >= getSafeZoneY() + SAFE_ZONE_HEIGHT) {
-                        this.gameOver = true;
+                        this.endGame(); // Properly transition to game over state
+                        return; // Exit immediately after triggering game over
                     }
                 }
             }

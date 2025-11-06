@@ -43,8 +43,9 @@ function detectBrowser() {
 
 /**
  * Zbierz pełny fingerprint przeglądarki i urządzenia
+ * @param {Object} fpsStats - FPS statistics from PerformanceMonitor {current, average, min, max}
  */
-async function getBrowserFingerprint() {
+async function getBrowserFingerprint(fpsStats = null) {
     const fingerprint = {
         // User Agent
         userAgent: navigator.userAgent,
@@ -100,6 +101,14 @@ async function getBrowserFingerprint() {
         webWorkers: typeof(Worker) !== 'undefined',
         serviceWorkers: 'serviceWorker' in navigator,
         geolocation: 'geolocation' in navigator,
+
+        // FPS Statistics (if provided)
+        fps: fpsStats ? {
+            average: fpsStats.average,
+            min: fpsStats.min,
+            max: fpsStats.max,
+            current: fpsStats.current
+        } : 'not_available',
 
         // Timestamp
         timestamp: new Date().toISOString()
@@ -224,9 +233,10 @@ async function getPublicIP() {
  *
  * @param {Object} playerData - Dane gracza {nick, email}
  * @param {Object} stats - Statystyki gry z finalizeStats()
+ * @param {Object} fpsStats - FPS statistics from game.performanceMonitor.getFpsStats()
  * @returns {Promise<boolean>} - true jeśli wysłano pomyślnie
  */
-export async function sendStatsToGoogleSheets(playerData, stats) {
+export async function sendStatsToGoogleSheets(playerData, stats, fpsStats = null) {
     // Sprawdź czy analytics jest włączony
     if (!ANALYTICS_ENABLED) {
         console.log('📊 Analytics disabled');
@@ -240,9 +250,9 @@ export async function sendStatsToGoogleSheets(playerData, stats) {
     }
 
     try {
-        // Zbierz pełny fingerprint przeglądarki (z IP)
+        // Zbierz pełny fingerprint przeglądarki (z IP i FPS stats)
         console.log('📊 Collecting browser fingerprint...');
-        const browserFingerprint = await getBrowserFingerprint();
+        const browserFingerprint = await getBrowserFingerprint(fpsStats);
 
         // Przygotuj dane do wysłania
         const payload = {
@@ -338,9 +348,19 @@ export function testAnalytics() {
     };
 
     console.log('🧪 Testing analytics endpoint...');
+
+    // Mock FPS stats for testing
+    const testFpsStats = {
+        average: 58,
+        min: 45,
+        max: 60,
+        current: 57
+    };
+
     sendStatsToGoogleSheets(
         { nick: testData.nick, email: testData.email },
-        testData
+        testData,
+        testFpsStats
     ).then(success => {
         if (success) {
             console.log('✅ Test successful! Check your Google Sheet.');

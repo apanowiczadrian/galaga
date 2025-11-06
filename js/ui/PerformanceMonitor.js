@@ -13,6 +13,8 @@ export class PerformanceMonitor {
         this.frameCount = 0;
         this.lastFpsUpdate = 0;
         this.fpsHistory = [];
+        this.minFps = Infinity;  // Track minimum FPS
+        this.maxFps = 0;          // Track maximum FPS
 
         // Performance profiling
         this.profiles = {
@@ -67,9 +69,7 @@ export class PerformanceMonitor {
      * Update FPS and calculate heaviest task
      */
     update(deltaTime) {
-        if (!this.enabled) return;
-
-        // Update FPS
+        // Always update FPS tracking (even when display is disabled)
         this.frameCount++;
         const currentTime = performance.now();
 
@@ -78,29 +78,36 @@ export class PerformanceMonitor {
             this.fpsHistory.push(this.fps);
             if (this.fpsHistory.length > 60) this.fpsHistory.shift();
 
-            // Calculate total frame time and find heaviest task
-            this.totalFrameTime = 0;
-            let maxTime = 0;
-            let maxTask = 'N/A';
+            // Track min/max FPS (always, even when display is disabled)
+            if (this.fps < this.minFps) this.minFps = this.fps;
+            if (this.fps > this.maxFps) this.maxFps = this.fps;
 
-            for (const [taskName, data] of Object.entries(this.profiles)) {
-                this.totalFrameTime += data.time;
-                if (data.time > maxTime) {
-                    maxTime = data.time;
-                    maxTask = taskName;
+            // Only do profiling if enabled (performance intensive)
+            if (this.enabled) {
+                // Calculate total frame time and find heaviest task
+                this.totalFrameTime = 0;
+                let maxTime = 0;
+                let maxTask = 'N/A';
+
+                for (const [taskName, data] of Object.entries(this.profiles)) {
+                    this.totalFrameTime += data.time;
+                    if (data.time > maxTime) {
+                        maxTime = data.time;
+                        maxTask = taskName;
+                    }
                 }
-            }
 
-            // Calculate percentage
-            if (this.totalFrameTime > 0) {
-                this.heaviestTaskPercent = (maxTime / this.totalFrameTime * 100).toFixed(1);
-                this.heaviestTask = maxTask.toUpperCase();
-            }
+                // Calculate percentage
+                if (this.totalFrameTime > 0) {
+                    this.heaviestTaskPercent = (maxTime / this.totalFrameTime * 100).toFixed(1);
+                    this.heaviestTask = maxTask.toUpperCase();
+                }
 
-            // Reset counters for next second
-            for (const task of Object.values(this.profiles)) {
-                task.time = 0;
-                task.calls = 0;
+                // Reset counters for next second
+                for (const task of Object.values(this.profiles)) {
+                    task.time = 0;
+                    task.calls = 0;
+                }
             }
 
             this.frameCount = 0;
@@ -158,6 +165,20 @@ export class PerformanceMonitor {
     }
 
     /**
+     * Get FPS statistics (for analytics)
+     */
+    getFpsStats() {
+        return {
+            current: this.fps,
+            average: this.fpsHistory.length > 0
+                ? Math.round(this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length)
+                : this.fps,
+            min: this.minFps === Infinity ? this.fps : this.minFps,
+            max: this.maxFps === 0 ? this.fps : this.maxFps
+        };
+    }
+
+    /**
      * Get detailed profile report (for console logging)
      */
     getReport() {
@@ -166,6 +187,8 @@ export class PerformanceMonitor {
             avgFps: this.fpsHistory.length > 0
                 ? Math.round(this.fpsHistory.reduce((a, b) => a + b, 0) / this.fpsHistory.length)
                 : this.fps,
+            minFps: this.minFps === Infinity ? this.fps : this.minFps,
+            maxFps: this.maxFps === 0 ? this.fps : this.maxFps,
             totalFrameTime: this.totalFrameTime.toFixed(2) + 'ms',
             tasks: {}
         };

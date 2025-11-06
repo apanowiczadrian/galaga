@@ -45,7 +45,7 @@ export class GameOverScreen {
     }
 
     update(mouseX, mouseY, deltaTime) {
-        const animationDuration = 0.35;
+        const animationDuration = 0.45;
 
         // Animate WASTED text (fade in and scale down)
         if (this.animationTime < animationDuration) {
