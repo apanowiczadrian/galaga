@@ -84,13 +84,14 @@
             email: email
           };
 
-          // Hide menu, show canvas (will be done by sketch.js)
-          window.isMenuReady = true;
+          // Hide start menu
+          document.getElementById('start-menu').style.display = 'none';
 
-          // Trigger custom event for sketch.js to listen
-          window.dispatchEvent(new CustomEvent('startGame', {
-            detail: { nick: nick, email: email }
-          }));
+          // Show PWA install screen
+          document.getElementById('pwa-install-screen').style.display = 'flex';
+
+          // Initialize PWA prompt
+          window.initPWAPrompt();
         }
 
         // Form submit handler (works for both Enter key and button click)
@@ -247,6 +248,82 @@
       </div>
     </div>
 
+    <!-- PWA Install Screen (pokazuje się po wprowadzeniu nicku) -->
+    <div id="pwa-install-screen" class="menu-overlay" style="display: none;">
+      <div class="menu-container">
+        <h1 class="menu-title">📱 INSTALACJA GRY</h1>
+        <p class="menu-subtitle" id="pwa-subtitle">Zainstaluj grę, aby uzyskać najlepsze doświadczenie!</p>
+
+        <!-- Android: Manual instructions -->
+        <div id="pwa-android" style="display: none;">
+          <div class="pwa-info">
+            <p>📱 Aby zainstalować grę na Android:</p>
+            <ol class="pwa-instructions">
+              <li>
+                <span class="pwa-step-icon">1️⃣</span>
+                <span>Naciśnij przycisk <strong>"Menu"</strong> ⋮<br>(trzy kropki w prawym górnym rogu)</span>
+              </li>
+              <li>
+                <span class="pwa-step-icon">2️⃣</span>
+                <span>Wybierz <strong>"Dodaj do ekranu głównego"</strong> lub <strong>"Install app"</strong> 📲</span>
+              </li>
+              <li>
+                <span class="pwa-step-icon">3️⃣</span>
+                <span>Potwierdź <strong>"Dodaj"</strong> lub <strong>"Install"</strong> ✅</span>
+              </li>
+            </ol>
+          </div>
+          <button id="android-done-button" class="start-button">
+            ✅ ZROBIŁEM, ROZPOCZNIJ GRĘ
+          </button>
+          <button id="android-skip-button" class="skip-button">
+            ⚠️ Pomiń, graj w niestabilną wersję
+          </button>
+        </div>
+
+        <!-- iOS: Manual instructions -->
+        <div id="pwa-ios" style="display: none;">
+          <div class="pwa-info">
+            <p>📱 Aby zainstalować grę na iOS:</p>
+            <ol class="pwa-instructions">
+              <li>
+                <span class="pwa-step-icon">1️⃣</span>
+                <span>Naciśnij przycisk <strong>"Udostępnij"</strong> 📤<br>(na dole ekranu)</span>
+              </li>
+              <li>
+                <span class="pwa-step-icon">2️⃣</span>
+                <span>Wybierz <strong>"Dodaj do ekranu głównego"</strong> ➕</span>
+              </li>
+              <li>
+                <span class="pwa-step-icon">3️⃣</span>
+                <span>Potwierdź <strong>"Dodaj"</strong> ✅</span>
+              </li>
+            </ol>
+          </div>
+          <button id="ios-done-button" class="start-button">
+            ✅ ZROBIŁEM, ROZPOCZNIJ GRĘ
+          </button>
+          <button id="ios-skip-button" class="skip-button">
+            ⚠️ Pomiń, graj w niestabilną wersję
+          </button>
+        </div>
+
+        <!-- Already installed -->
+        <div id="pwa-installed" style="display: none;">
+          <div class="pwa-info">
+            <p>✅ Gra jest już zainstalowana!</p>
+            <p style="font-size: 14px; color: rgb(180, 200, 255); margin-top: 10px;">
+              Uruchom ją z ekranu głównego dla najlepszego doświadczenia.
+            </p>
+          </div>
+          <button id="installed-continue-button" class="start-button">
+            🎮 ROZPOCZNIJ GRĘ
+          </button>
+        </div>
+
+      </div>
+    </div>
+
     <script>
       // Prevent pinch-to-zoom
       document.addEventListener('touchmove', function (event) {
@@ -273,6 +350,59 @@
         }
         lastTouchEnd = now;
       }, false);
+    </script>
+
+    <!-- PWA Install Logic -->
+    <script>
+      window.initPWAPrompt = function() {
+        const androidDiv = document.getElementById('pwa-android');
+        const iosDiv = document.getElementById('pwa-ios');
+        const installedDiv = document.getElementById('pwa-installed');
+
+        // Check if already running in standalone mode (PWA already installed)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                            window.navigator.standalone === true;
+
+        if (isStandalone) {
+          // Already installed - show confirmation
+          installedDiv.style.display = 'block';
+          document.getElementById('installed-continue-button').addEventListener('click', startGameFromPWA);
+          return;
+        }
+
+        // Detect iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        if (isIOS) {
+          // iOS - show manual instructions
+          iosDiv.style.display = 'block';
+
+          document.getElementById('ios-done-button').addEventListener('click', startGameFromPWA);
+          document.getElementById('ios-skip-button').addEventListener('click', startGameFromPWA);
+        } else {
+          // Android - show manual instructions
+          androidDiv.style.display = 'block';
+
+          document.getElementById('android-done-button').addEventListener('click', startGameFromPWA);
+          document.getElementById('android-skip-button').addEventListener('click', startGameFromPWA);
+        }
+      };
+
+      function startGameFromPWA() {
+        // Hide PWA screen
+        document.getElementById('pwa-install-screen').style.display = 'none';
+
+        // Show canvas
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+          canvas.style.display = 'block';
+        }
+
+        // Trigger startGame event for sketch.js
+        window.dispatchEvent(new CustomEvent('startGame', {
+          detail: window.playerDataFromMenu
+        }));
+      }
     </script>
   </body>
 </html>

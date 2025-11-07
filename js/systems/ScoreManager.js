@@ -10,6 +10,12 @@ export class ScoreManager {
 
     // Save a new score
     saveScore(playerData, score, wave, time) {
+        // Don't save scores of 0 or negative
+        if (score <= 0) {
+            console.log('⚠️ Score of 0 or less not saved to leaderboard');
+            return null;
+        }
+
         const scores = this.getLocalScores();
 
         const newScore = {
@@ -63,9 +69,9 @@ export class ScoreManager {
     // Get top N scores (from online or localStorage)
     async getTopScores(limit = 4) {
         if (!this.useOnlineLeaderboard) {
-            // Fallback to localStorage
+            // Fallback to localStorage (filter out 0 scores)
             const scores = this.getLocalScores();
-            return scores.slice(0, limit);
+            return scores.filter(s => s.score > 0).slice(0, limit);
         }
 
         try {
@@ -73,28 +79,63 @@ export class ScoreManager {
             const onlineScores = await fetchTopScores(limit);
 
             if (onlineScores && onlineScores.length > 0) {
-                this.onlineScoresCache = onlineScores;
-                return onlineScores;
+                // Filter out 0 scores (shouldn't happen with server-side filtering, but be safe)
+                this.onlineScoresCache = onlineScores.filter(s => s.score > 0);
+                return this.onlineScoresCache;
             }
         } catch (error) {
             console.error('Failed to fetch online scores, using local:', error);
         }
 
-        // Fallback to localStorage if API fails
+        // Fallback to localStorage if API fails (filter out 0 scores)
         const localScores = this.getLocalScores();
-        return localScores.slice(0, limit);
+        return localScores.filter(s => s.score > 0).slice(0, limit);
     }
 
     // Get top scores synchronously (for immediate rendering)
-    // Returns cached online scores or local scores
+    // Returns merged scores (local + online cache) for most accurate leaderboard
     getTopScoresSync(limit = 4) {
+        const localScores = this.getLocalScores();
+
+        // If we have online cache, merge with local scores
         if (this.onlineScoresCache && this.onlineScoresCache.length > 0) {
-            return this.onlineScoresCache.slice(0, limit);
+            // Create a map to deduplicate by nick+score+time
+            const scoresMap = new Map();
+
+            // Add local scores first (highest priority - most up-to-date)
+            localScores.forEach(score => {
+                // Filter out scores of 0 or less
+                if (score.score > 0) {
+                    const key = `${score.nick}_${score.score}_${score.time}`;
+                    scoresMap.set(key, score);
+                }
+            });
+
+            // Add online scores (won't overwrite local duplicates)
+            this.onlineScoresCache.forEach(score => {
+                // Filter out scores of 0 or less
+                if (score.score > 0) {
+                    const key = `${score.nick}_${score.score}_${score.time}`;
+                    if (!scoresMap.has(key)) {
+                        scoresMap.set(key, score);
+                    }
+                }
+            });
+
+            // Convert back to array and sort
+            const mergedScores = Array.from(scoresMap.values());
+            mergedScores.sort((a, b) => {
+                if (b.score !== a.score) {
+                    return b.score - a.score;
+                }
+                return a.time - b.time;
+            });
+
+            return mergedScores.slice(0, limit);
         }
 
-        // Fallback to local
-        const localScores = this.getLocalScores();
-        return localScores.slice(0, limit);
+        // Fallback to local only (filter out 0 scores)
+        return localScores.filter(score => score.score > 0).slice(0, limit);
     }
 
     // Clear all scores (for testing)
@@ -112,17 +153,24 @@ export class ScoreManager {
     // Find player's rank in leaderboard (1-indexed)
     // Returns object with rank and score data, or null if not found
     findPlayerRank(playerData, score, time) {
-        // Use cached online scores if available, otherwise local
-        const scores = this.onlineScoresCache && this.onlineScoresCache.length > 0
-            ? this.onlineScoresCache
-            : this.getLocalScores();
+        // Don't rank scores of 0 or less
+        if (score <= 0) {
+            return null;
+        }
+
+        // ALWAYS use localStorage for finding player rank (most up-to-date)
+        // Online cache might not have the latest score yet
+        const scores = this.getLocalScores();
+
+        // Filter out scores of 0 or less before finding rank
+        const validScores = scores.filter(s => s.score > 0);
 
         // Find the exact score entry matching player, score, and time
-        for (let i = 0; i < scores.length; i++) {
-            const scoreData = scores[i];
+        for (let i = 0; i < validScores.length; i++) {
+            const scoreData = validScores[i];
             if (scoreData.nick === playerData.nick &&
                 Math.abs(scoreData.score - score) < 1 &&
-                Math.abs(scoreData.time - time) < 1) {
+                Math.abs(Math.floor(scoreData.time) - Math.floor(time)) < 1) {
                 return {
                     rank: i + 1, // 1-indexed
                     data: scoreData

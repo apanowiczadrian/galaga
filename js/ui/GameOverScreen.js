@@ -106,6 +106,9 @@ export class GameOverScreen {
         const vh = getVirtualHeight();
         const centerX = vw / 2;
 
+        // Check if player is in top 4
+        const isInTop4 = playerRank && playerRank.rank <= 4;
+
         // Gray space/cosmic background (semi-transparent to show stars)
         push();
 
@@ -217,8 +220,34 @@ export class GameOverScreen {
 
         pop();
 
+        // Congratulations message if player is in top 4
+        let congratsOffset = 0;
+        if (isInTop4) {
+            push();
+            textAlign(CENTER, CENTER);
+            textFont('Orbitron, Arial, sans-serif');
+            textStyle(BOLD);
+            textSize(20);
+
+            // Pulsing gold effect
+            const pulse = sin(millis() * 0.003) * 0.15 + 0.85; // Pulsuje między 0.7 a 1.0
+            fill(255, 215, 0, pulse * 255);
+
+            // Rank text with medal emoji
+            let rankText = '';
+            if (playerRank.rank === 1) rankText = '🏆 CONGRATULATIONS! YOU\'RE #1! 🏆';
+            else if (playerRank.rank === 2) rankText = '🥈 GREAT JOB! YOU\'RE #2! 🥈';
+            else if (playerRank.rank === 3) rankText = '🥉 AWESOME! YOU\'RE #3! 🥉';
+            else if (playerRank.rank === 4) rankText = '⭐ WELL DONE! YOU\'RE #4! ⭐';
+
+            text(rankText, centerX, statsY + statsSpacing + 35);
+            pop();
+
+            congratsOffset = 30; // Extra space for the message
+        }
+
         // Top Scores Section - GTA style
-        const leaderboardY = statsY + 80;
+        const leaderboardY = statsY + 80 + congratsOffset;
 
         push();
         textAlign(CENTER, CENTER);
@@ -267,37 +296,48 @@ export class GameOverScreen {
             const rowY = tableY + (i + 1) * rowHeight;
 
             // Highlight current player's score
-            const isCurrentPlayer = scoreData.nick === playerData.nick &&
-                                   Math.abs(scoreData.score - score) < 1 &&
-                                   Math.abs(scoreData.time - time) < 1;
+            // NOTE: time is already Math.floor'd before being passed to draw()
+            const nickMatch = scoreData.nick === playerData.nick;
+            const scoreMatch = Math.abs(scoreData.score - score) < 1;
+            const timeMatch = Math.abs(scoreData.time - time) < 1;
+            const isCurrentPlayer = nickMatch && scoreMatch && timeMatch;
 
             if (isCurrentPlayer) {
-                // Subtle highlight background
-                fill(60, 0, 0, 100);
+                // Highlight background with pulsing effect for current player
+                const pulse = sin(millis() * 0.004) * 0.3 + 0.7; // Pulsuje między 0.4 a 1.0
+
+                // More visible highlight with golden glow
+                fill(80, 60, 0, 150 * pulse); // Dark gold background
                 noStroke();
-                rect(col1 - 8, rowY - rowHeight/2 + 3, 410, rowHeight - 6, 3);
+                rect(col1 - 10, rowY - rowHeight/2 + 2, 414, rowHeight - 4, 4);
+
+                // Glowing border
+                stroke(255, 215, 0, 180 * pulse);
+                strokeWeight(2);
+                noFill();
+                rect(col1 - 10, rowY - rowHeight/2 + 2, 414, rowHeight - 4, 4);
             }
 
             // Different colors and sizes for each rank
             let rowColor, rowSize;
             if (i === 0) {
                 // 1st place - GOLD, largest
-                rowColor = isCurrentPlayer ? color(255, 215, 0) : color(255, 215, 0);
+                rowColor = isCurrentPlayer ? color(255, 235, 100) : color(255, 215, 0);
                 rowSize = 18;
                 textStyle(BOLD);
             } else if (i === 1) {
                 // 2nd place - SILVER, medium
-                rowColor = isCurrentPlayer ? color(220, 220, 220) : color(192, 192, 192);
+                rowColor = isCurrentPlayer ? color(240, 240, 240) : color(192, 192, 192);
                 rowSize = 16;
                 textStyle(BOLD);
             } else if (i === 2) {
                 // 3rd place - BRONZE, smaller
-                rowColor = isCurrentPlayer ? color(255, 180, 100) : color(205, 127, 50);
+                rowColor = isCurrentPlayer ? color(255, 200, 120) : color(205, 127, 50);
                 rowSize = 14;
                 textStyle(NORMAL);
             } else {
                 // 4th+ place - GRAY, smallest
-                rowColor = isCurrentPlayer ? color(200, 200, 200) : color(150, 150, 150);
+                rowColor = isCurrentPlayer ? color(220, 220, 220) : color(150, 150, 150);
                 rowSize = 14;
                 textStyle(NORMAL);
             }

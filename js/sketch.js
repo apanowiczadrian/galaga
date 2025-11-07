@@ -448,7 +448,7 @@ function drawGameOverScreen(deltaTime) {
     game.gameOverScreen.draw(
         game.score,
         game.wave,
-        game.stats.totalGameTime,
+        Math.floor(game.stats.totalGameTime), // Use Math.floor for consistency with saved scores
         game.playerData,
         topScores,
         playerRank

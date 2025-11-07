@@ -276,3 +276,112 @@ canvas {
         margin-bottom: 15px;
     }
 }
+
+/* ===================================
+   PWA INSTALL SCREEN STYLES
+   =================================== */
+
+.pwa-info {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.pwa-info p {
+    font-family: 'Rajdhani', Arial, sans-serif;
+    font-size: 16px;
+    color: rgb(200, 200, 220);
+    margin: 0 0 15px 0;
+}
+
+.pwa-benefits {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+    text-align: left;
+}
+
+.pwa-benefits li {
+    font-family: 'Rajdhani', Arial, sans-serif;
+    font-size: 15px;
+    color: rgb(180, 200, 255);
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(100, 100, 150, 0.2);
+}
+
+.pwa-benefits li:last-child {
+    border-bottom: none;
+}
+
+.pwa-instructions {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+    text-align: left;
+}
+
+.pwa-instructions li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: rgba(50, 50, 80, 0.4);
+    border: 1px solid rgba(100, 120, 255, 0.3);
+    border-radius: 8px;
+    font-family: 'Rajdhani', Arial, sans-serif;
+    font-size: 14px;
+    color: rgb(200, 200, 220);
+}
+
+.pwa-instructions li:last-child {
+    margin-bottom: 0;
+}
+
+.pwa-step-icon {
+    font-size: 22px;
+    min-width: 30px;
+    text-align: center;
+}
+
+.skip-button {
+    background: transparent;
+    border: 1px solid rgb(100, 100, 150);
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-family: 'Rajdhani', Arial, sans-serif;
+    font-size: 14px;
+    color: rgb(150, 150, 200);
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.skip-button:hover {
+    background: rgba(50, 50, 80, 0.5);
+    border-color: rgb(150, 150, 200);
+    color: rgb(200, 200, 220);
+}
+
+.skip-button:active {
+    transform: scale(0.98);
+}
+
+@media (max-width: 768px) {
+    .pwa-info p {
+        font-size: 15px;
+    }
+
+    .pwa-benefits li {
+        font-size: 14px;
+    }
+
+    .pwa-instructions li {
+        font-size: 13px;
+        padding: 10px;
+    }
+
+    .pwa-step-icon {
+        font-size: 20px;
+    }
+}

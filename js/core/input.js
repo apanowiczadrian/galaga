@@ -155,10 +155,8 @@ export function handleKeyPressed(game, key) {
             break;
 
         case GameStates.GAME_OVER:
-            // Press Enter or Space to restart game
-            if (key === "Enter" || key === " ") {
-                game.restartGame();
-            }
+            // Restart only via mouse click on button (not keyboard)
+            // Keyboard restart disabled to prevent accidental restarts
             break;
     }
 }
