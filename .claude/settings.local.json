@@ -10,7 +10,17 @@
       "Bash(node --version:*)",
       "Bash(npm install:*)",
       "Bash(node optimize_assets.js:*)",
-      "Bash(node optimize_assets_simple.js:*)"
+      "Bash(node optimize_assets_simple.js:*)",
+      "Bash(dir:*)",
+      "Bash(tree:*)",
+      "Bash(temp_original.html)",
+      "WebSearch",
+      "Bash(del error-logger-server.js package.json README-ERROR-LOGGER.md)",
+      "Bash(if [ -d \"node_modules\" ])",
+      "Bash(then echo \"node_modules exists\")",
+      "Bash(fi)",
+      "Bash(if [ -f \"package-lock.json\" ])",
+      "Bash(then echo \"package-lock.json exists\")"
     ],
     "deny": [],
     "ask": []

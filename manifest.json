@@ -1,19 +1,26 @@
 {
-  "short_name": "spaceInv",
-  "name": "Space Invaders",
+  "id": "/",
+  "scope": "/",
+  "short_name": "Galaga",
+  "name": "Galaga - Space Invaders",
+  "description": "Space Invaders-style arcade game with endless waves and online leaderboard",
+  "lang": "pl",
+  "categories": ["games", "entertainment"],
   "icons": [
     {
       "src": "assets/spaceship.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
-      "src": "assets/spaceship.png",
+      "src": "assets/spaceship512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
-  "start_url": "index.html",
+  "start_url": "/",
   "display": "fullscreen",
   "orientation": "landscape",
   "theme_color": "#000000",

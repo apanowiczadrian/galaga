@@ -88,6 +88,17 @@ window.setup = function() {
         // Show canvas
         canvas.elt.style.display = 'block';
 
+        // Runtime PWA detection - warn if not in standalone mode
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                            window.navigator.standalone === true;
+        if (!isStandalone) {
+            console.warn('⚠️ Ostrzeżenie: Gra nie działa w trybie PWA. Dla najlepszego doświadczenia uruchom z ikony na ekranie głównym.');
+            // Store warning flag for potential UI display
+            game.pwaWarning = true;
+        } else {
+            game.pwaWarning = false;
+        }
+
         // Preload online leaderboard (non-blocking)
         game.scoreManager.preloadLeaderboard(10);
 

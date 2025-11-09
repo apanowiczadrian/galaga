@@ -209,6 +209,16 @@ canvas {
     border-color: rgb(100, 130, 255) !important;
 }
 
+.start-button:disabled,
+.start-button.cooldown {
+    background: rgb(100, 100, 100) !important; /* Gray */
+    border-color: rgb(120, 120, 120) !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* Mobile Styles */
 @media (max-width: 768px) {
     .menu-container {
@@ -365,6 +375,26 @@ canvas {
 
 .skip-button:active {
     transform: scale(0.98);
+}
+
+.pwa-error-message {
+    background: rgba(255, 50, 50, 0.15);
+    border: 1px solid rgb(255, 100, 100);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+    font-family: 'Rajdhani', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    color: rgb(255, 120, 120);
+    text-align: center;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
 @media (max-width: 768px) {

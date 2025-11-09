@@ -165,17 +165,40 @@ export class ScoreManager {
         // Filter out scores of 0 or less before finding rank
         const validScores = scores.filter(s => s.score > 0);
 
-        // Find the exact score entry matching player, score, and time
+        // IMPORTANT: Sort scores to ensure correct ranking
+        // (in case localStorage was manually edited or corrupted)
+        validScores.sort((a, b) => {
+            if (b.score !== a.score) {
+                return b.score - a.score;
+            }
+            return a.time - b.time;
+        });
+
+        // Find ALL matching entries for this player with this score
+        let bestMatch = null;
+        let bestMatchIndex = -1;
+        let newestTimestamp = 0;
+
         for (let i = 0; i < validScores.length; i++) {
             const scoreData = validScores[i];
             if (scoreData.nick === playerData.nick &&
                 Math.abs(scoreData.score - score) < 1 &&
                 Math.abs(Math.floor(scoreData.time) - Math.floor(time)) < 1) {
-                return {
-                    rank: i + 1, // 1-indexed
-                    data: scoreData
-                };
+
+                // If this match has a newer timestamp, use it instead
+                if (scoreData.timestamp > newestTimestamp) {
+                    newestTimestamp = scoreData.timestamp;
+                    bestMatch = scoreData;
+                    bestMatchIndex = i;
+                }
             }
+        }
+
+        if (bestMatch) {
+            return {
+                rank: bestMatchIndex + 1, // 1-indexed
+                data: bestMatch
+            };
         }
 
         return null;
