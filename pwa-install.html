@@ -270,6 +270,9 @@
                 return; // Ignore clicks during cooldown
             }
 
+            // Mark that user has seen PWA screen (session flag to prevent redirect loop)
+            sessionStorage.setItem('pwaScreenSeen', 'true');
+
             // Check if PWA is installed
             if (isStandaloneMode()) {
                 // PWA detected - check localStorage and redirect accordingly
@@ -308,6 +311,9 @@
                 // Remove old listener and add new one that checks localStorage
                 doneButton.removeEventListener('click', handlePWADoneClick);
                 doneButton.addEventListener('click', () => {
+                    // Mark that user has seen PWA screen (session flag)
+                    sessionStorage.setItem('pwaScreenSeen', 'true');
+
                     if (hasPlayerData()) {
                         console.log('→ Fallback mode, player data exists → redirecting to game');
                         redirectToGame();
