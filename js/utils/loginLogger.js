@@ -9,7 +9,7 @@ import { getBrowserFingerprint, detectBrowser, detectBrowserVersion, detectDevic
 import { isStandaloneMode } from '../core/viewport.js';
 
 // 🔧 Google Sheets endpoint (same as analytics.js)
-const GOOGLE_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbx18SZnL14VGzLQcZddjqMTcK1wE9DKCnn1N4CQXGv_pqFYJHfPPQUXfMpkcVng0fonmQ/exec';
+const GOOGLE_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwuOniSK7mORUc-i6y1GRY73Cpme92tcj0u4pvN6FEP1H7YoDDkj8TJct3mplfdTNm2zQ/exec';
 
 // Enable/disable login logging
 const LOGIN_LOGGING_ENABLED = true;
@@ -22,6 +22,7 @@ const LOGIN_LOGGING_ENABLED = true;
  * @returns {Promise<boolean>} - Resolves when sent or timeout reached
  */
 export async function sendLoginToGoogleSheets(playerData, timeout = 2000) {
+    console.log('🔵 sendLoginToGoogleSheets called with:', playerData);
     try {
         // Race between actual send and timeout
         const sendPromise = sendLoginInBackground(playerData);
@@ -30,6 +31,7 @@ export async function sendLoginToGoogleSheets(playerData, timeout = 2000) {
         );
 
         const result = await Promise.race([sendPromise, timeoutPromise]);
+        console.log('🔵 Login logging result:', result);
         return result;
     } catch (error) {
         console.error('❌ Login logging failed:', error);
@@ -41,6 +43,8 @@ export async function sendLoginToGoogleSheets(playerData, timeout = 2000) {
  * Internal function - sends login data in background
  */
 async function sendLoginInBackground(playerData) {
+    console.log('🟢 sendLoginInBackground started');
+
     // Check if logging is enabled
     if (!LOGIN_LOGGING_ENABLED) {
         console.log('📊 Login logging disabled');
@@ -54,13 +58,16 @@ async function sendLoginInBackground(playerData) {
     }
 
     try {
+        console.log('🟡 Collecting browser fingerprint...');
         // Collect browser fingerprint (without FPS stats and game stats)
         const fingerprint = await getBrowserFingerprint(null, null);
+        console.log('🟡 Fingerprint collected:', fingerprint);
 
         // Detect browser info
         const browserName = detectBrowser();
         const browserVersion = detectBrowserVersion();
         const isPWA = isStandaloneMode();
+        console.log('🟡 Browser info:', { browserName, browserVersion, isPWA });
 
         // Prepare payload
         const payload = {
@@ -83,17 +90,21 @@ async function sendLoginInBackground(playerData) {
         };
 
         // Send POST request with 2s timeout
+        console.log('🟠 Sending to Google Sheets:', GOOGLE_SHEETS_ENDPOINT);
+        console.log('🟠 Payload:', payload);
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 2s timeout
 
         try {
+            const bodyString = JSON.stringify(payload);
+            console.log('🟠 Stringified body:', bodyString);
             const response = await fetch(GOOGLE_SHEETS_ENDPOINT, {
                 method: 'POST',
                 mode: 'no-cors', // Important: Google Apps Script requires no-cors
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(payload),
+                body: bodyString,
                 signal: controller.signal
             });
 

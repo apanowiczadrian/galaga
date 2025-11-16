@@ -4,9 +4,18 @@
  * Settings for the remote debug logging system.
  */
 
+/**
+ * Check if we're running on localhost (development environment)
+ */
+const isLocalhost = typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+   window.location.hostname === '127.0.0.1' ||
+   window.location.hostname === '' ||
+   window.location.hostname.startsWith('192.168.'));
+
 export const DebugConfig = {
-  // Enable/disable remote logging
-  enabled: true,
+  // Enable/disable remote logging (ONLY on localhost)
+  enabled: isLocalhost,
 
   // Debug server URL (auto-detects hostname from current page URL)
   serverUrl: typeof window !== 'undefined' ? `http://${window.location.hostname}:3001` : 'http://localhost:3001',

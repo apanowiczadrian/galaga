@@ -6,7 +6,7 @@
  */
 
 // 🔧 WKLEJ TUTAJ SWÓJ WEB APP URL (ten sam co w analytics.js)
-const GOOGLE_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbx18SZnL14VGzLQcZddjqMTcK1wE9DKCnn1N4CQXGv_pqFYJHfPPQUXfMpkcVng0fonmQ/exec';
+const GOOGLE_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwuOniSK7mORUc-i6y1GRY73Cpme92tcj0u4pvN6FEP1H7YoDDkj8TJct3mplfdTNm2zQ/exec';
 
 // Cache dla leaderboard (żeby nie odpytywać za często)
 let leaderboardCache = null;
