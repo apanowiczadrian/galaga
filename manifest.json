@@ -2,7 +2,7 @@
   "scope": "./",
   "id": "./",
   "short_name": "Galaga",
-  "name": "Galaga - Space Invaders",
+  "name": "Galaga",
   "description": "Space Invaders-style arcade game with endless waves and online leaderboard",
   "lang": "pl",
   "categories": ["games", "entertainment"],

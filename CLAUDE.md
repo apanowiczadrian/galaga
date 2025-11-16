@@ -353,6 +353,11 @@ window.visualViewport.addEventListener('resize', () => {
 
 **Purpose:** Remote debugging for mobile devices and production environments with device fingerprinting and game context tracking.
 
+**Environment Detection:**
+- **Production (GitHub Pages):** Debugging DISABLED - prevents console spam and mixed content errors
+- **Development (localhost, 127.0.0.1, 192.168.x.x):** Debugging ENABLED
+- Auto-detects environment via `window.location.hostname`
+
 **Architecture:**
 - **Client:** Intercepts all console.* calls and sends to remote server
 - **Server:** Node.js/Express server with web interface and JSONL file logging
@@ -372,7 +377,7 @@ window.visualViewport.addEventListener('resize', () => {
 **Configuration:** [js/debug/config.js](js/debug/config.js)
 ```javascript
 {
-  enabled: true,
+  enabled: isLocalhost,  // Only enabled on localhost/127.0.0.1/192.168.x.x
   serverUrl: 'http://{hostname}:3001',  // Auto-detects from window.location.hostname
   batchEnabled: true,
   batchInterval: 500,   // ms
@@ -1345,6 +1350,8 @@ node server.js
 
 ## Version History
 
+- **2025-11-16:**
+  - **Environment-aware debugging:** DebugLogger automatically disabled on production (GitHub Pages), enabled only on localhost/127.0.0.1/192.168.x.x - prevents console spam and mixed content errors on deployed site ([config.js:10-14](js/debug/config.js#L10-L14))
 - **2025-11-13:**
   - **Global Error Handling System** (critical mobile crash prevention):
     - **Global error handlers:** window.onerror + unhandledrejection ([sketch.js:149-189](js/sketch.js#L149-L189))
