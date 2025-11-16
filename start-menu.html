@@ -96,7 +96,7 @@
     <!-- Main Logic -->
     <script type="module">
         import { savePlayerData, loadPlayerData, validatePlayerData } from './shared/player-data.js';
-        import { redirectToGame } from './shared/navigation.js';
+        import { redirectToTutorial } from './shared/navigation.js';
         import { isMobileDevice, isStandaloneMode } from './shared/pwa-detection.js';
 
         // Initialize portrait warning
@@ -141,8 +141,8 @@
                 // Save to localStorage
                 savePlayerData(nick, email);
 
-                // Always redirect to game (user already saw PWA screen if needed)
-                redirectToGame();
+                // Redirect to tutorial (first-time player)
+                redirectToTutorial();
             });
 
             // Auto-focus on nick input for desktop

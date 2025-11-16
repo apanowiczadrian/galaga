@@ -67,6 +67,7 @@ All Polish UI strings have been **manually crafted and polished** by the develop
 | **Game state flow** | [Game.js](js/Game.js), [GameStates.js](js/core/GameStates.js) | State machine transitions |
 | **Power-up system** | [PowerUpManager.js](js/systems/PowerUpManager.js) | Drop rates, weighted selection |
 | **Error handling** | [sketch.js:615-656](js/sketch.js#L615-L656) | Try-catch wrappers, fallback UIs |
+| **Tutorial flow** | [tutorial.html](tutorial.html), [shared/navigation.js:48-59](shared/navigation.js#L48-L59) | 2 screens (controls + power-ups), canvas rendering |
 
 ### For Developers: Local Setup
 
@@ -201,6 +202,51 @@ enemy.x = mouseX; // Breaks on different viewports
 
 ---
 
+### Scrolling Management
+<!-- SUBSECTION:scrolling-management -->
+
+**Problem Solved**: Game canvas needs fixed positioning (no scroll), but forms/tutorial need scrolling on small screens.
+
+**Solution**: Selective scroll blocking via CSS class.
+
+| Page | Scrolling | Implementation |
+|------|-----------|----------------|
+| **game.html** | ❌ Disabled | `<body class="no-scroll">` |
+| **tutorial.html** | ✅ Enabled | `overflow: auto` (inline CSS) |
+| **index.html** | ✅ Enabled | `overflow: auto` (inline CSS) |
+| **pwa-install.html** | ✅ Enabled | Default (no override) |
+| **start-menu.html** | ✅ Enabled | Default (no override) |
+
+**Implementation** ([shared/styles.css:519-521](shared/styles.css#L519-L521)):
+```css
+/* Global: scrolling enabled by default */
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    /* NO overflow: hidden */
+}
+
+/* Game-specific: disable scrolling */
+body.no-scroll {
+    overflow: hidden;
+}
+```
+
+**Usage**:
+- **game.html**: `<body class="no-scroll">` → prevents canvas scroll
+- **All other pages**: No class → scrolling works normally
+
+**Why?**
+- Fixed canvas must not scroll (breaks gameplay)
+- Forms/tutorial may overflow on small screens (need scroll)
+- Clean separation via single CSS class
+
+**Files**: [shared/styles.css](shared/styles.css), [game.html:24](game.html#L24)
+
+**Keywords**: `#scrolling #overflow #responsive`
+
+---
+
 ### PWA Configuration
 <!-- SUBSECTION:pwa-configuration -->
 
@@ -272,11 +318,13 @@ const urlsToCache = [`${basePath}manifest.json`, ...];
 3. **3-State Button System**:
    - **State 1**: "Dodaj grę do ekranu" - triggers native install prompt (Chromium only, requires user gesture)
    - **State 2**: "Uruchomić grę bez PWA?" - 2s cooldown before enabling State 3
-   - **State 3**: "Graję w niestabilną grę" - launches game/menu based on localStorage
-4. If installed: Desktop auto-opens PWA, Mobile requires manual icon tap
+   - **State 3**: "Graję w niestabilną grę" - redirects to start-menu.html (new users) or game.html (returning users)
+4. After registration: start-menu.html → tutorial.html (new users only) → game.html
+5. If installed: Desktop auto-opens PWA, Mobile requires manual icon tap
 
 **Desktop:**
-- Skips PWA screen entirely (index.html → game.html or start-menu.html)
+- Skips PWA screen entirely (index.html → start-menu.html → tutorial.html → game.html for new users)
+- Returning users: index.html → game.html (skips tutorial)
 
 **Native Install Prompt** (Chromium browsers only):
 - Captured via `beforeinstallprompt` event (requires HTTPS or localhost)
@@ -575,6 +623,7 @@ JSON.parse(localStorage.getItem('debugLogs'));
 | [viewport.js](js/core/viewport.js) | Viewport logic, device detection | `getViewportDimensions()`, `isStandaloneMode()` | ~150 |
 | [input.js](js/core/input.js) | Input handling (keyboard, mouse, touch) | `setupInputHandlers()` | ~200 |
 | [constants.js](js/core/constants.js) | SAFE_ZONE dimensions, global constants | `SAFE_ZONE` object | ~50 |
+| [tutorial.html](tutorial.html) | Tutorial screens (controls + power-ups) | Canvas rendering, 2-screen flow | ~480 |
 
 ### 🎮 Game Systems (Modify Sometimes)
 
@@ -772,6 +821,7 @@ https://script.google.com/macros/s/AKfycbx18SZnL14VGzLQcZddjqMTcK1wE9DKCnn1N4CQX
 
 ### Version History
 
+- **2025-11-16 (tutorial)**: Tutorial system - 2-screen onboarding (controls canvas + power-ups with assets/ graphics), fixed scrolling management (enabled for forms/tutorial, disabled only for game.html via .no-scroll class), new users see tutorial after registration, returning users skip to game, mobile-friendly compact layout
 - **2025-11-16 (later)**: Leaderboard deduplication system - unique nick-based leaderboard (one player = one entry with best score), fixed congratulations bug (rank calculation matches displayed data), display uses Google Sheets only (no localStorage), deprecated getTopScores/getTopScoresSync in favor of getTopScoresUniqueNicks/getTopScoresUniqueNicksSync
 - **2025-11-16**: PWA installation instructions enhancement - added final step "🚀 Uruchom grę z pulpitu" to all platforms (Android, Opera, iOS), 3-state button system (native prompt trigger → fallback warning → launch), user gesture requirement for native install prompt
 - **2025-11-15 (later)**: PWA Opera Mobile support - Opera browser detection, platform-specific installation instructions, native browser install prompt with user gesture, toast notifications for installation feedback
@@ -786,7 +836,7 @@ https://script.google.com/macros/s/AKfycbx18SZnL14VGzLQcZddjqMTcK1wE9DKCnn1N4CQX
 
 For quick searches (Ctrl+F or Claude):
 
-- `#architecture` - System design, state machine, viewport, safe zone
+- `#architecture` - System design, state machine, viewport, safe zone, scrolling
 - `#pwa` - PWA configuration, installation, offline support, service worker
 - `#mobile` - Mobile optimizations, touch controls, performance, viewport stability
 - `#gameplay` - Game mechanics, difficulty, power-ups, weapon heat
@@ -796,6 +846,8 @@ For quick searches (Ctrl+F or Claude):
 - `#patterns` - Code patterns, best practices, coordinate transformation
 - `#troubleshooting` - Common issues, fixes, testing checklist
 - `#performance` - Optimization, object pooling, spatial grid, batch rendering
+- `#tutorial` - Tutorial screens, onboarding flow, controls canvas, power-ups guide
+- `#scrolling` - Scroll management, overflow handling, responsive layout
 
 ---
 

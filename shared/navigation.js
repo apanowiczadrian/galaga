@@ -46,6 +46,19 @@ export function redirectToPWA(preserveHistory = false) {
 }
 
 /**
+ * Redirect to tutorial.html (game tutorial)
+ * @param {boolean} preserveHistory - If true, uses href instead of replace (allows back button)
+ */
+export function redirectToTutorial(preserveHistory = false) {
+    console.log('🔄 Redirecting to tutorial.html');
+    if (preserveHistory) {
+        window.location.href = 'tutorial.html';
+    } else {
+        window.location.replace('tutorial.html');
+    }
+}
+
+/**
  * Redirect to game.html (game canvas)
  * @param {boolean} preserveHistory - If true, uses href instead of replace (allows back button)
  */
