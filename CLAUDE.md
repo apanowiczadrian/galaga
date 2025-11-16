@@ -652,6 +652,7 @@ JSON.parse(localStorage.getItem('debugLogs'));
 |------|---------|-------|
 | [leaderboardAPI.js](js/utils/leaderboardAPI.js) | Google Sheets API integration | Fetch/save scores, 60s cache |
 | [analytics.js](js/utils/analytics.js) | Game statistics logging | Send stats on game over, 5s timeout |
+| [loginLogger.js](js/utils/loginLogger.js) | User login tracking | Log user logins to Google Sheets, 2s timeout |
 | [DebugLogger.js](js/debug/DebugLogger.js) | Remote logging client | Auto-initialized, device fingerprinting |
 | [debugging/server.js](debugging/server.js) | Node.js log server | `node debugging/server.js` |
 
@@ -674,7 +675,8 @@ https://script.google.com/macros/s/AKfycbx18SZnL14VGzLQcZddjqMTcK1wE9DKCnn1N4CQX
 
 **Actions**:
 - `GET ?action=leaderboard&limit=N` - Fetch top N scores
-- `POST /exec` - Send analytics data
+- `POST /exec` - Send analytics data (game stats)
+- `POST /exec` with `action=loginlog` - Log user login (nick, email, browser info, fingerprint)
 
 **Cache**: 60 seconds for leaderboard requests
 
@@ -821,6 +823,7 @@ https://script.google.com/macros/s/AKfycbx18SZnL14VGzLQcZddjqMTcK1wE9DKCnn1N4CQX
 
 ### Version History
 
+- **2025-11-16 (login-logging)**: User login tracking system - logs user logins to Google Sheets 'loginlog' sheet, tracks nick, email, browser name/version, PWA status, device fingerprint (JSON), 2s timeout with await before redirect, exports detectDevice/Browser/BrowserVersion from analytics.js
 - **2025-11-16 (tutorial)**: Tutorial system - 2-screen onboarding (controls canvas + power-ups with assets/ graphics), fixed scrolling management (enabled for forms/tutorial, disabled only for game.html via .no-scroll class), new users see tutorial after registration, returning users skip to game, mobile-friendly compact layout
 - **2025-11-16 (later)**: Leaderboard deduplication system - unique nick-based leaderboard (one player = one entry with best score), fixed congratulations bug (rank calculation matches displayed data), display uses Google Sheets only (no localStorage), deprecated getTopScores/getTopScoresSync in favor of getTopScoresUniqueNicks/getTopScoresUniqueNicksSync
 - **2025-11-16**: PWA installation instructions enhancement - added final step "🚀 Uruchom grę z pulpitu" to all platforms (Android, Opera, iOS), 3-state button system (native prompt trigger → fallback warning → launch), user gesture requirement for native install prompt
