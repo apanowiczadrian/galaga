@@ -276,9 +276,10 @@ async function getPublicIP() {
  * @param {Object} playerData - Dane gracza {nick, email}
  * @param {Object} stats - Statystyki gry z finalizeStats()
  * @param {Object} fpsStats - FPS statistics from game.performanceMonitor.getFpsStats()
+ * @param {string} customMessage - Optional user message to replace fingerprint (for feedback)
  * @returns {Promise<boolean>} - true jeśli wysłano pomyślnie
  */
-export async function sendStatsToGoogleSheets(playerData, stats, fpsStats = null) {
+export async function sendStatsToGoogleSheets(playerData, stats, fpsStats = null, customMessage = null) {
     // Sprawdź czy analytics jest włączony
     if (!ANALYTICS_ENABLED) {
         console.log('📊 Analytics disabled');
@@ -292,8 +293,16 @@ export async function sendStatsToGoogleSheets(playerData, stats, fpsStats = null
     }
 
     try {
-        // Zbierz pełny fingerprint przeglądarki (z IP, FPS stats i cheat detection)
-        const browserFingerprint = await getBrowserFingerprint(fpsStats, stats);
+        // Determine browser field content
+        let browserData;
+        if (customMessage) {
+            // If custom message provided, use it with prefix instead of fingerprint
+            browserData = "USER_MESSAGE: " + customMessage;
+        } else {
+            // Normal flow: collect full browser fingerprint
+            const browserFingerprint = await getBrowserFingerprint(fpsStats, stats);
+            browserData = JSON.stringify(browserFingerprint);
+        }
 
         // Przygotuj dane do wysłania
         const payload = {
@@ -329,7 +338,7 @@ export async function sendStatsToGoogleSheets(playerData, stats, fpsStats = null
 
             // Metadata
             device: detectDevice(),
-            browser: JSON.stringify(browserFingerprint), // 🆕 Pełny fingerprint jako JSON
+            browser: browserData, // Either fingerprint JSON or "USER_MESSAGE: ..." string
             timestamp: Date.now(),
 
             // URL gry (dla multi-domain tracking)
@@ -356,7 +365,11 @@ export async function sendStatsToGoogleSheets(playerData, stats, fpsStats = null
 
             // Note: mode: 'no-cors' nie pozwala odczytać response,
             // ale request zostanie wysłany i przetworzony przez Apps Script
-            console.log('✅ poprawnie zapisano wynik do bazy');
+            if (customMessage) {
+                console.log('✅ poprawnie zapisano wiadomość do bazy');
+            } else {
+                console.log('✅ poprawnie zapisano wynik do bazy');
+            }
             return true;
 
         } catch (fetchError) {

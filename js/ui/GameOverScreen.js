@@ -15,6 +15,14 @@ export class GameOverScreen {
             pulsePhase: 0    // For heartbeat animation
         };
 
+        // Message button with envelope icon (swinging animation)
+        this.messageButton = {
+            x: 80,           // Fixed position: left margin (same as heart)
+            y: 300,          // Middle of screen height
+            radius: 62.5,    // Same size as heart button
+            isHovered: false
+        };
+
         this.wastedAlpha = 0;
         this.wastedScale = 5.0;
         this.animationTime = 0;
@@ -35,8 +43,20 @@ export class GameOverScreen {
         // Used for spacing adjustments in other parts of UI
         this.isSmallScreen = vh <= 620;
 
-        // FAB button has fixed position (80, 80) set in constructor
-        // No conditional positioning needed
+        // On mobile: position buttons between left edge and "W" letter of WASTED
+        if (this.isMobile) {
+            const centerX = vw / 2;
+            const wastedSize = 100; // Mobile size from draw()
+            const letterSpacing = wastedSize * 0.8;
+            const totalTextWidth = 6 * letterSpacing; // 6 letters: W A S T E D
+            const startX = centerX - totalTextWidth / 2; // Position of "W" letter
+
+            // Center buttons between left edge (0) and "W" position
+            const buttonX = startX / 2;
+
+            this.fabButton.x = buttonX;
+            this.messageButton.x = buttonX;
+        }
     }
 
     reset() {
@@ -79,6 +99,7 @@ export class GameOverScreen {
         // Check if mouse is over FAB button (only on desktop for hover effect)
         // On mobile, we skip hover and check directly in handleClick()
         if (!this.isMobile) {
+            // Check FAB button (heart)
             const dx = mouseX - this.fabButton.x;
             const dy = mouseY - this.fabButton.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -88,11 +109,42 @@ export class GameOverScreen {
             } else {
                 this.fabButton.isHovered = false;
             }
+
+            // Check message button (envelope)
+            const dxMsg = mouseX - this.messageButton.x;
+            const dyMsg = mouseY - this.messageButton.y;
+            const distanceMsg = Math.sqrt(dxMsg * dxMsg + dyMsg * dyMsg);
+
+            if (distanceMsg < this.messageButton.radius) {
+                this.messageButton.isHovered = true;
+            } else {
+                this.messageButton.isHovered = false;
+            }
         }
     }
 
     handleClick(mouseX, mouseY) {
-        // Circular click detection for FAB button
+        // Check message button first (priority over restart)
+        const dxMsg = mouseX - this.messageButton.x;
+        const dyMsg = mouseY - this.messageButton.y;
+        const distanceMsg = Math.sqrt(dxMsg * dxMsg + dyMsg * dyMsg);
+        const isInMessageButton = distanceMsg < this.messageButton.radius;
+
+        if (this.isMobile) {
+            // Mobile: direct click detection for message button
+            if (isInMessageButton) {
+                this.handleMessageClick();
+                return false; // Don't restart game
+            }
+        } else {
+            // Desktop: use hover state for message button
+            if (this.messageButton.isHovered) {
+                this.handleMessageClick();
+                return false; // Don't restart game
+            }
+        }
+
+        // Circular click detection for FAB button (restart)
         const dx = mouseX - this.fabButton.x;
         const dy = mouseY - this.fabButton.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -513,6 +565,62 @@ export class GameOverScreen {
 
         pop();
 
+        // Message button with envelope icon (swinging animation)
+        push();
+
+        // Calculate swing animation (bujanie na boki)
+        const swingAngle = Math.sin(millis() * 0.003) * 0.15; // ±0.15 radians (~8.6 degrees)
+
+        // Calculate glow pulse (same as heart)
+        const glowPulseMsg = Math.sin(millis() * 0.003) * 0.1 + 1.0;
+
+        // Hover scale effect (no heartbeat pulse for message button)
+        const hoverScaleMsg = this.messageButton.isHovered ? 1.15 : 1.0;
+
+        // Draw glow effect
+        if (this.messageButton.isHovered) {
+            noFill();
+            stroke(100, 150, 255, 100 * glowPulseMsg); // Blue glow for message
+            strokeWeight(6);
+            circle(this.messageButton.x, this.messageButton.y, this.messageButton.radius * 2 * hoverScaleMsg + 20);
+        }
+
+        // Draw circular background
+        if (this.messageButton.isHovered) {
+            fill(60, 60, 60);
+            stroke(120, 170, 255); // Blue border for message
+            strokeWeight(4);
+        } else {
+            fill(40, 40, 40);
+            stroke(100, 150, 255); // Blue border for message
+            strokeWeight(3);
+        }
+        circle(this.messageButton.x, this.messageButton.y, this.messageButton.radius * 2 * hoverScaleMsg);
+
+        // Draw envelope emoji with swing animation
+        translate(this.messageButton.x, this.messageButton.y);
+        rotate(swingAngle); // Apply swing rotation
+
+        textAlign(CENTER, CENTER);
+        textSize(this.messageButton.radius * 1.2 * hoverScaleMsg); // Emoji size
+        text('💌', 0, 0); // Envelope emoji
+
+        pop();
+
+        // Label under message button
+        push();
+        textAlign(CENTER, CENTER);
+        textFont('Rajdhani, Arial, sans-serif');
+        textSize(28); // 2× większa czcionka (było 14)
+        fill(180, 180, 180);
+        textStyle(NORMAL);
+
+        // Two lines of text
+        text('Zostaw', this.messageButton.x, this.messageButton.y + this.messageButton.radius + 20);
+        text('Wiadomość', this.messageButton.x, this.messageButton.y + this.messageButton.radius + 48); // Zwiększony odstęp dla większej czcionki
+
+        pop();
+
         } catch (error) {
             console.error('❌ Error rendering game over screen:', error);
 
@@ -534,6 +642,62 @@ export class GameOverScreen {
             textSize(20);
             text('Click to Restart', getVirtualWidth() / 2, getVirtualHeight() / 2 + 100);
             pop();
+        }
+    }
+
+    handleMessageClick() {
+        // Show prompt to user
+        const message = window.prompt("Zostaw wiadomość (max 200 znaków):");
+
+        // Validate and send
+        if (message && message.trim().length > 0) {
+            const trimmedMessage = message.trim().substring(0, 200);
+            console.log('📧 Wysyłanie wiadomości:', trimmedMessage);
+            this.sendMessageToSheets(trimmedMessage);
+        }
+    }
+
+    async sendMessageToSheets(message) {
+        // Import sendStatsToGoogleSheets dynamically to avoid circular dependencies
+        const { sendStatsToGoogleSheets } = await import('../utils/analytics.js');
+
+        // Get current game stats from game object
+        const stats = {
+            finalScore: this.game.score || 0,
+            finalWave: this.game.wave || 0,
+            enemiesKilled: this.game.enemiesKilled || 0,
+            totalGameTime: this.game.gameTime?.toFixed(2) || '0',
+            totalShots: this.game.totalShots || 0,
+            shotsPerSecond: this.game.gameTime > 0 ? (this.game.totalShots / this.game.gameTime).toFixed(2) : '0',
+            shotsByWeapon: this.game.shotsByWeapon || { basic: 0, triple: 0, rocket: 0 },
+            powerUpsCollected: this.game.powerUpsCollected || { life: 0, shield: 0, autofire: 0, tripleshot: 0, rocket: 0 }
+        };
+
+        // Get FPS stats if available
+        const fpsStats = this.game.performanceMonitor?.getFpsStats() || null;
+
+        // Get player data
+        const playerData = this.game.playerData || { nick: 'Anonymous', email: '' };
+
+        try {
+            // Send to Google Sheets with message as fingerprint override
+            // We'll need to modify the call to accept a fingerprint override parameter
+            // For now, we'll use a workaround by temporarily modifying the fingerprint
+
+            // Call sendStatsToGoogleSheets with custom fingerprint parameter
+            // Note: We'll need to pass the message as a custom parameter
+            const result = await sendStatsToGoogleSheets(playerData, stats, fpsStats, message);
+
+            if (result) {
+                console.log('✅ Wiadomość wysłana pomyślnie!');
+                window.alert('✅ Dziękujemy za wiadomość!');
+            } else {
+                console.error('❌ Nie udało się wysłać wiadomości');
+                window.alert('❌ Nie udało się wysłać wiadomości. Spróbuj ponownie.');
+            }
+        } catch (error) {
+            console.error('❌ Błąd podczas wysyłania wiadomości:', error);
+            window.alert('❌ Wystąpił błąd. Spróbuj ponownie.');
         }
     }
 }
