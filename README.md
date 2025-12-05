@@ -1,82 +1,86 @@
-## Instalacja
+# Space Invaders - Lodis Edition 🐧
 
-1. Use npm to install the server.
-```
-npm install -g http-server
-```
-2. Run the server.
-```
-cd directory/
-http-server -c-1
-```
+A classic Space Invaders browser game inspired by **LODIS (Polish esports team)** 
+- Works on desktop and mobile, 
+- built with **p5.js** as a Progressive Web App.
+
+🎮 **Play the game here!** https://apanowiczadrian.github.io/galaga
+
+<img src="assets/screenshot.png" alt="Game Screenshot" width="600"/>
 
 ---
 
+## 📦 Installation
 
-# Space Invaders - Penguin Edition
+The game requires no Node.js or installations - just a local HTTP server:
 
-## Zasady Gry
+**Python 3:**
+```bash
+python -m http.server 8000
+```
 
-### Sterowanie
+**Node.js (optional):**
+```bash
+npm install -g http-server  // install server
+git clone https://github.com/apanowiczadrian/galaga.git
+cd galaga/
+http-server -p 8080         // run server
+```
+
+Then open `http://localhost:8080` in your browser.
+
+---
+
+## 🎮 Game Rules
+
+### Controls
 
 **Desktop:**
-- `Strzałka <-  -> ` - ruch w lewo prawo   
-- `Spacja` - strzał
-- `D` - dev overlay (statystyki)
-- `G` - god mode (nieśmiertelność)
-- `+` - zwiększ fale (endless mode)
-- `-` - zmniejsz fale (endless mode)
+- `Arrow ← →` - move left/right   
+- `Space` - shoot
+- `D` - dev overlay (statistics)
+- `G` - god mode (invincibility)
+- `+` - increase wave (endless mode)
+- `-` - decrease wave (endless mode)
 
 **Mobile:**
-- Lewa połowa ekranu - ruch w lewo
-- Prawa połowa ekranu - ruch w prawo + auto-strzał
+- Left side of screen - move left and right
+- Right side of screen - shoot
 
-### Punktacja i Poziomy
+### Scoring and Levels
 
-- **Bazowe punkty:** 1 punkt za przeciwnika (+1 punkt za każde 2 fale)
-- **Boss:** 10x więcej punktów niż zwykły przeciwnik
-- **Komety:** 10-30 punktów (zależnie od rozmiaru)
+- **Base points:** 1 point per enemy (+1 point every 2 waves)
+- **Boss:** 10x more points than regular enemy
+- **Comets:** 10-30 points (depending on size)
 
-**Fale (Endless Mode):**
-- Każda kolejna fala zwiększa trudność
-- **Fala 1-10:** Przeciwnicy mają 1 HP, Boss 5 HP
-- **Fala 11-20:** Przeciwnicy 2 HP, Boss 10 HP
-- **Fala 21-30:** Przeciwnicy 3 HP, Boss 15 HP
-- Przeciwnicy strzelają coraz częściej z każdą falą (+15% na falę)
-- Komety pojawiają się częściej na wyższych poziomach
+**Waves (Endless Mode):**
+- Each wave increases difficulty
+- **Wave 1-10:** Enemies have 1 HP, Boss 5 HP
+- **Wave 11-20:** Enemies 2 HP, Boss 10 HP
+- **Wave 21-30:** Enemies 3 HP, Boss 15 HP
+- Enemies shoot more frequently each wave (+15% per wave)
+- Comets appear more often at higher levels
 
-### Power-upy
+### Power-ups
 
-- **❤️ Life:** +1 życie (max 3)
-- **🛡️ Shield:** Tarcza na 1 trafienie
-- **🔥 Auto-fire:** Automatyczny ogień na 4 sekundy
-- **3️⃣ Triple Shot:** Potrójny strzał na 5 sekund
-- **🚀 Rocket:** Niszczy wszystkich przeciwników i komety na ekranie
+- **❤️ Life:** +1 life (max 3)
+- **🛡️ Shield:** Shield for 1 hit
+- **🔥 Auto-fire:** Automatic fire for 4 seconds
+- **3️⃣ Triple Shot:** Triple shot for 5 seconds
+- **🚀 Rocket:** Destroys all enemies and comets on screen
 
-**Szanse na drop:**
-- Przeciwnicy: 3% (Life), 5% (Shield, Auto-fire, Triple Shot, Rocket)
-- Komety: 5-10% (Rocket, zależnie od rozmiaru)
+**Drop chances:**
+- Enemies: 3% (Life), 5% (Shield, Auto-fire, Triple Shot, Rocket)
+- Comets: 5-10% (Rocket, depending on size)
 
-### Mechanika Broni
+### Weapon Mechanics
 
-- **Zamrażanie:** Im więcej strzelasz, tym bardziej broń się oziębia
-- **Kolor:** Zielony (ciepło) → Żółty → Niebieski (FROZEN)
-- Kiedy broń jest zamrożona, nie możesz strzelać przez krótki czas
+- **Freezing:** The more you shoot, the colder the weapon gets
+- **Color:** Green (warm) → Yellow → Blue (FROZEN)
+- When the weapon is frozen, you can't shoot for a short time
 
 ---
 
-## Autor i Licencja
+## 📄 License
 
-**Autor:** Adrian Apanowicz
-
-**Licencja:** MIT License
-
-Gra jest udostępniona za darmo na licencji open-source. Możesz:
-- ✅ Używać kodu w projektach osobistych i komercyjnych
-- ✅ Modyfikować i dostosowywać kod
-- ✅ Czerpać zyski z gry i jej modyfikacji
-- ✅ Publikować i dystrybuować
-
-**Warunek:** Przy publikacji należy zachować informację o autorze (Adrian Apanowicz) w kodzie lub dokumentacji.
-
-Copyright (c) 2025 Adrian Apanowicz
+MIT License - Copyright (c) 2025 Adrian Apanowicz

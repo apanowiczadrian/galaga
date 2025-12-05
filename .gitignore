@@ -9,3 +9,12 @@ newImg/
 debugging/node_modules/
 debugging/logs/
 
+# Console logs and debug exports
+*.log
+console-export-*.log
+consoleLogsFromBrowser.txt
+
+# Development files
+todo
+.claude/
+

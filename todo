@@ -1,6 +1,0 @@
-Wyświetlanie HTML 
-- Strona taka jak 'indeks' 'start-menu', 'pwa-install' powinny być lepiej wyświetlane na telefonie w pozycji pionowej z określeniem gdzie jest klawiatura. Klawiatura przesłania niektóre elementy i ciężko jest je kliknąć. 
-
--Jak użytkownik wejdzie na stronę i zainstaluje PWA ten instalator ma sprawdzić czy już jest zainstalowana ta aplikacja jeśli tak to ma jakoś pomóc mu ją uruchomić żeby nie musiał manualnie wychodzić z przeglądarki i włączać ją z ekranu głównego 
-
--Powiększyć czcionkę z Nazwę Użytkownika przy punktach 
